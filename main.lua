@@ -1,37 +1,6 @@
 local jit = require("jit")
 local ffi = require("ffi")
 
-local libdir = _G.LOVEVLC_LIB_DIRECTORY or "lib"
-if love.filesystem.isFused() and love.filesystem.mountFullPath then
-    local sourceBaseDir = os.getenv("OWD") -- use OWD for linux app image support
-    if not sourceBaseDir then
-        sourceBaseDir = love.filesystem.getSourceBaseDirectory()
-    end
-    libdir = sourceBaseDir .. "/" .. libdir
-    love.filesystem.mountFullPath(sourceBaseDir, "")
-end
-local os = jit and jit.os or ffi.os
-
-local extension = os == "Windows" and "dll" or os == "Linux" and "so" or os == "OSX" and "dylib"
-package.cpath = string.format("%s;%s/?.%s", package.cpath, libdir, extension)
-
-local vlc = ffi.os == "Windows" and ffi.load(assert(package.searchpath("libvlc", package.cpath))) or ffi.load("libvlc")
-local vlcWrapper = nil
-
-if os == "Windows" then
-    -- windows (load dll from win64 folder)
-    vlcWrapper = ffi.load(assert(package.searchpath("win64/libvlc_wrapper", package.cpath)))
-    
-elseif os == "Linux" then
-    -- linux (load so from linux folder)
-    vlcWrapper = ffi.load(assert(package.searchpath("linux/libvlc_wrapper", package.cpath)))
-    
-elseif os == "OSX" then
-    -- macos (load dylib from mac folder)
-    vlcWrapper = ffi.load(assert(package.searchpath("mac/libvlc_wrapper", package.cpath)))
-else
-    error(("Unsupported OS: %s"):format(os))
-end
 require("libvlc_h")
 ffi.cdef [[\
     typedef struct {
@@ -50,6 +19,36 @@ ffi.cdef [[\
     void video_use_all_callbacks(libvlc_media_player_t *mp, void *opaque);
     bool can_update_texture(void);
 ]]
+
+local libdir = _G.LOVEVLC_LIB_DIRECTORY or "lib"
+local sourceBaseDir = os.getenv("OWD") -- use OWD for linux app image support
+if not sourceBaseDir then
+    sourceBaseDir = love.filesystem.getWorkingDirectory()
+end
+libdir = sourceBaseDir .. "/" .. libdir
+love.filesystem.mountFullPath(sourceBaseDir, "")
+local os = jit and jit.os or ffi.os
+
+local extension = os == "Windows" and "dll" or os == "Linux" and "so" or os == "OSX" and "dylib"
+package.cpath = string.format("%s;%s/?.%s", package.cpath, libdir, extension)
+
+local vlc = ffi.os == "Windows" and ffi.load(assert(package.searchpath("win64/libvlc", package.cpath)):gsub("/", "\\")) or ffi.load("libvlc")
+local vlcWrapper = nil
+
+if os == "Windows" then
+    -- windows (load dll from win64 folder)
+    vlcWrapper = ffi.load(assert(package.searchpath("win64/libvlc_wrapper", package.cpath)))
+    
+elseif os == "Linux" then
+    -- linux (load so from linux folder)
+    vlcWrapper = ffi.load(assert(package.searchpath("linux/libvlc_wrapper", package.cpath)))
+    
+elseif os == "OSX" then
+    -- macos (load dylib from mac folder)
+    vlcWrapper = ffi.load(assert(package.searchpath("mac/libvlc_wrapper", package.cpath)))
+else
+    error(("Unsupported OS: %s"):format(os))
+end
 
 local vlcData = {
     inst = nil,
