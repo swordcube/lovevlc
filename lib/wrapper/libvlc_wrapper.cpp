@@ -3,9 +3,16 @@
 
 // NOTE: this only wraps functions that i can't call correctly in lua code
 
+#if _WIN32
+extern "C" __declspec(dllexport)
+#endif
+
 extern "C" {
-    extern "C" __declspec(dllexport)
+    #if _WIN32
     #define EXPORT_DLL __declspec(dllexport)
+    #else
+    #define EXPORT_DLL 
+    #endif
 
     typedef struct {
         unsigned char* pixelBuffer;
