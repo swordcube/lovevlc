@@ -1,3 +1,4 @@
+local jit = require("jit")
 local ffi = require("ffi")
 local libdir = _G.LOVEVLC_LIB_DIRECTORY or "lib"
 
@@ -6,20 +7,21 @@ package.cpath = string.format("%s;%s/?.%s", package.cpath, libdir, extension)
 
 local vlc = ffi.os == "Windows" and ffi.load(assert(package.searchpath("libvlc", package.cpath))) or ffi.load("libvlc")
 local vlcWrapper = nil
-if ffi.os == "Windows" then
+
+local os = jit and jit.os or ffi.os
+if os == "Windows" then
     -- windows (load dll from win64 folder)
     vlcWrapper = ffi.load(assert(package.searchpath("win64/libvlc_wrapper", package.cpath)))
     
-elseif ffi.os == "Linux" then
+elseif os == "Linux" then
     -- linux (load so from linux folder)
     vlcWrapper = ffi.load(assert(package.searchpath("linux/libvlc_wrapper", package.cpath)))
     
-elseif ffi.os == "OSX" or ffi.os == "Mac" or ffi.os == "MacOS" or ffi.os == "Darwin" or ffi.os == "macOS" then
+elseif os == "OSX" then
     -- macos (load dylib from mac folder)
-    -- no clue what macOS' string is so fuck it catch them all!
     vlcWrapper = ffi.load(assert(package.searchpath("mac/libvlc_wrapper", package.cpath)))
 else
-    error(("Unsupported OS: %s"):format(ffi.os))
+    error(("Unsupported OS: %s"):format(os))
 end
 require("libvlc_h")
 ffi.cdef [[\
