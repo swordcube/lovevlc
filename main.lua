@@ -1,14 +1,23 @@
 local jit = require("jit")
 local ffi = require("ffi")
-local libdir = _G.LOVEVLC_LIB_DIRECTORY or "lib"
 
-local extension = jit.os == "Windows" and "dll" or jit.os == "Linux" and "so" or jit.os == "OSX" and "dylib"
+local libdir = _G.LOVEVLC_LIB_DIRECTORY or "lib"
+if love.filesystem.isFused() and love.filesystem.mountFullPath then
+    local sourceBaseDir = os.getenv("OWD") -- use OWD for linux app image support
+    if not sourceBaseDir then
+        sourceBaseDir = love.filesystem.getSourceBaseDirectory()
+    end
+    libdir = sourceBaseDir .. "/" .. libdir
+    love.filesystem.mountFullPath(sourceBaseDir, "")
+end
+local os = jit and jit.os or ffi.os
+
+local extension = os == "Windows" and "dll" or os == "Linux" and "so" or os == "OSX" and "dylib"
 package.cpath = string.format("%s;%s/?.%s", package.cpath, libdir, extension)
 
 local vlc = ffi.os == "Windows" and ffi.load(assert(package.searchpath("libvlc", package.cpath))) or ffi.load("libvlc")
 local vlcWrapper = nil
 
-local os = jit and jit.os or ffi.os
 if os == "Windows" then
     -- windows (load dll from win64 folder)
     vlcWrapper = ffi.load(assert(package.searchpath("win64/libvlc_wrapper", package.cpath)))
