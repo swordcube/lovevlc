@@ -1,12 +1,23 @@
 local ffi = require("ffi")
-local vlc = ffi.os == "Windows" and ffi.load("lib/libvlc") or ffi.load("libvlc")
+local libdir = _G.LOVEVLC_LIB_DIRECTORY or "lib"
+
+local extension = jit.os == "Windows" and "dll" or jit.os == "Linux" and "so" or jit.os == "OSX" and "dylib"
+package.cpath = string.format("%s;%s/?.%s", package.cpath, libdir, extension)
+
+local vlc = ffi.os == "Windows" and ffi.load(assert(package.searchpath("libvlc", package.cpath))) or ffi.load("libvlc")
 local vlcWrapper = nil
 if ffi.os == "Windows" then
-    vlcWrapper = ffi.load("lib/win64/libvlc_wrapper.dll")
+    -- windows (load dll from win64 folder)
+    vlcWrapper = ffi.load(assert(package.searchpath("win64/libvlc_wrapper", package.cpath)))
+    
 elseif ffi.os == "Linux" then
-    vlcWrapper = ffi.load("lib/linux/libvlc_wrapper.so")
-elseif ffi.os == "OSX" then
-    vlcWrapper = ffi.load("lib/osx/libvlc_wrapper")
+    -- linux (load so from linux folder)
+    vlcWrapper = ffi.load(assert(package.searchpath("linux/libvlc_wrapper", package.cpath)))
+    
+elseif ffi.os == "OSX" or ffi.os == "Mac" or ffi.os == "MacOS" or ffi.os == "Darwin" or ffi.os == "macOS" then
+    -- macos (load dylib from mac folder)
+    -- no clue what macOS' string is so fuck it catch them all!
+    vlcWrapper = ffi.load(assert(package.searchpath("mac/libvlc_wrapper", package.cpath)))
 else
     error(("Unsupported OS: %s"):format(ffi.os))
 end
