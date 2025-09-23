@@ -3,12 +3,9 @@
 
 // NOTE: this only wraps functions that i can't call correctly in lua code
 
-#if _WIN32
-extern "C" __declspec(dllexport)
-#endif
-
 extern "C" {
     #if _WIN32
+    extern "C" __declspec(dllexport)
     #define EXPORT_DLL __declspec(dllexport)
     #else
     #define EXPORT_DLL 
