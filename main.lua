@@ -29,9 +29,10 @@ else
         ffi.C.setenv(name, value, 1)
     end
 end
+print(love.filesystem.getExecutablePath())
 if os == "Windows" or os == "OSX" then
     -- make sure to set plugin path or else it won't work on windows !   lol!
-    local pp = love.filesystem.getWorkingDirectory() .. "/" .. plugindir .. "/" .. os -- hehe
+    local pp = love.filesystem.getExecutablePath() .. "/" .. plugindir .. "/" .. os -- hehe
     os.setenv("VLC_PLUGIN_PATH", pp)
 end
 
@@ -89,6 +90,9 @@ local loveImageData = nil --- @type love.ImageData
 local loveImage = nil --- @type love.Image
 
 function love.load(gameArgs)
+    if not gameArgs[1] then
+        error("You must specify a file path to a video file to play as an argument!")
+    end
     local args = {
         "--ignore-config",
         "--drop-late-frames",
@@ -104,7 +108,7 @@ function love.load(gameArgs)
         "--no-video-title-show",
         "--no-volume-save",
         "--no-xlib",
-        "--verbose=3"
+        "--verbose=-1"
     }
     local argsPtr = ffi.new("const char *[?]", #args)
     for i = 1, #args do
@@ -152,18 +156,45 @@ function love.update(dt)
                 
                 loveImageData = love.image.newImageData(w, h, "rgba8")
                 loveImage = love.graphics.newImage(loveImageData)
+                
                 renderedVideo = true
             end
         end
     else
-        if vlcWrapper.can_update_texture() and loveImageData then
+        local state = vlc.libvlc_media_player_get_state(vlcData.mediaPlayer)
+        if state == 3 and vlcWrapper.can_update_texture() and loveImageData then
+            -- method 1 (slow)
             -- for x = 1, loveImageData:getWidth() do
             --     for y = 1, loveImageData:getHeight() do
             --         local idx = ((x - 1) + ((y - 1) * loveImageData:getWidth())) * 3
             --         loveImageData:setPixel(x - 1, y - 1, tonumber(luaVlcVideo.pixelBuffer[idx + 0]) / 255, tonumber(luaVlcVideo.pixelBuffer[idx + 1]) / 255, tonumber(luaVlcVideo.pixelBuffer[idx + 2]) / 255, 1)
             --     end
             -- end
-            loveImageData:mapPixel(updatePixel)
+
+            -- method 2 (faster, but still quite slow)
+            -- loveImageData:mapPixel(updatePixel)
+
+            -- method 3 (ffi way, Might be faster)
+            -- local ptr = ffi.cast("unsigned char*", loveImageData:getFFIPointer())
+            -- ffi.copy(ptr, luaVlcVideo.pixelBuffer, loveImageData:getWidth() * loveImageData:getHeight() * 3)
+
+            local w, h = loveImageData:getWidth(), loveImageData:getHeight()
+            local src = ffi.cast("unsigned char*", luaVlcVideo.pixelBuffer) -- RGB8 source
+            local dst = ffi.cast("unsigned char*", loveImageData:getFFIPointer())  -- RGBA8 destination
+
+            local srcIndex, dstIndex = 0, 0
+            local numPixels = w * h
+
+            for _ = 0, numPixels - 1 do
+                -- Copy R,G,B
+                dst[dstIndex] = src[srcIndex] -- R
+                dst[dstIndex + 1] = src[srcIndex + 1] -- G
+                dst[dstIndex + 2] = src[srcIndex + 2] -- B
+                dst[dstIndex + 3] = 255              -- A (fully opaque)
+
+                srcIndex = srcIndex + 3
+                dstIndex = dstIndex + 4
+            end
             loveImage:replacePixels(loveImageData)
         end
     end
@@ -173,6 +204,7 @@ function love.draw()
     if loveImage then
         love.graphics.draw(loveImage, 0, 0, 0, love.graphics.getWidth() / loveImageData:getWidth(), love.graphics.getHeight() / loveImageData:getHeight())
     end
+    love.graphics.print(love.timer.getFPS() .. " FPS", 10, 3)
 end
 
 function love.quit()
