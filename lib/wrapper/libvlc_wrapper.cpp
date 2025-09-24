@@ -44,6 +44,33 @@ extern "C" {
         };
         libvlc_instance_t* inst = libvlc_new(15, argshit);
         printf("VLC error: %s\n", libvlc_errmsg());
+        if(inst == NULL || inst == nullptr) {
+            printf("Instance is NULL or nullptr, resetting plugin cache!\n");
+            const char *argshit[] = {
+                "--ignore-config",
+                "--drop-late-frames",
+                "--aout=none",
+                "--intf=none",
+                "--vout=none",
+                "--no-interact",
+                "--no-keyboard-events",
+                "--no-mouse-events",
+                "--no-lua",
+                "--no-snapshot-preview",
+                "--no-sub-autodetect-file",
+                "--no-video-title-show",
+                "--no-volume-save",
+                "--no-xlib",
+                "--verbose=-1",
+                "--reset-plugins-cache"
+            };
+            libvlc_instance_t* inst = libvlc_new(16, argshit);
+            printf("VLC error: %s\n", libvlc_errmsg());
+
+            if(inst == NULL || inst == nullptr) {
+                printf("Instance is NULL or nullptr, fuck!\n");
+            }
+        }
         return inst;
     }
 
