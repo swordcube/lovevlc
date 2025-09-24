@@ -2,12 +2,46 @@ local jit = require("jit")
 local ffi = require("ffi")
 
 local libdir = _G.LOVEVLC_LIB_DIRECTORY or "lib"
+local plugindir = _G.LOVEVLC_PLUGIN_DIRECTORY or "plugins"
+
+local osm = os
 local os = jit and jit.os or ffi.os
+
+-- add os.setenv for plugin folder!
+if os == "Windows" then
+    ffi.cdef[[
+        int _putenv(const char *envstring);
+    ]]
+    --- Sets an environment variable in the current process
+    --- @param name string
+    --- @param value string
+    osm.setenv = function(name, value)
+        ffi.C._putenv(name .. "=" .. value)
+    end
+else
+    ffi.cdef[[
+      int setenv(const char *name, const char *value, int overwrite);
+    ]]
+    --- Sets an environment variable in the current process
+    --- @param name string
+    --- @param value string
+    osm.setenv = function(name, value)
+        ffi.C.setenv(name, value, 1)
+    end
+end
+if os == "Windows" or os == "OSX" then
+    -- make sure to set plugin path or else it won't work on windows !   lol!
+    local pp = love.filesystem.getWorkingDirectory() .. "/" .. plugindir .. "/" .. os -- hehe
+    os.setenv("VLC_PLUGIN_PATH", pp)
+end
 
 local extension = os == "Windows" and "dll" or os == "Linux" and "so" or os == "OSX" and "dylib"
 package.cpath = string.format("%s;%s/?.%s", package.cpath, libdir, extension)
 
+-- this isn't technically used, but needs to be loaded for libvlc to load on windows!
 local vlccore = os == "Windows" and ffi.load(assert(package.searchpath("win64/libvlccore", package.cpath)):gsub("/", "\\")) or ffi.load("libvlccore")
+
+-- this IS used though
 local vlc = os == "Windows" and ffi.load(assert(package.searchpath("win64/libvlc", package.cpath)):gsub("/", "\\")) or ffi.load("libvlc")
 local vlcWrapper = nil
 
