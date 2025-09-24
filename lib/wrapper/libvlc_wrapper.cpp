@@ -42,7 +42,9 @@ extern "C" {
             "--no-xlib",
             "--verbose=-1"
         };
-        return libvlc_new(15, argshit);
+        libvlc_instance_t* inst = libvlc_new(15, argshit);
+        printf("VLC error: %s\n", libvlc_errmsg());
+        return inst;
     }
 
     EXPORT_DLL unsigned char* luavlc_new_pixel_buffer(unsigned int width, unsigned int height) {
