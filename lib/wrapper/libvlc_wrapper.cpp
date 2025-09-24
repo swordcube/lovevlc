@@ -25,7 +25,7 @@ extern "C" {
     }
 
     EXPORT_DLL unsigned char* luavlc_new_pixel_buffer(unsigned int width, unsigned int height) {
-        return (unsigned char*)malloc(width * height * 3);
+        return (unsigned char*)malloc(width * height * 4);
     }
 
     EXPORT_DLL void luavlc_free_pixel_buffer(unsigned char* pixelBuffer) {
@@ -55,6 +55,10 @@ extern "C" {
 
     EXPORT_DLL bool can_update_texture(void) {
         return _can_update_texture;
+    }
+
+    EXPORT_DLL void video_setup_format(libvlc_media_player_t *mp, unsigned int width, unsigned int height) {
+        libvlc_video_set_format(mp, "RV32", width, height, width * 4);
     }
 
     EXPORT_DLL void video_use_unlock_callback(libvlc_media_player_t *mp, void *opaque) {

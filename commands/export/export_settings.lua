@@ -43,9 +43,9 @@ local settings = {
 }
 if os.name() == "Windows" then
     settings.EXTERNAL_FILES["../../plugins/Windows"] = "plugins"
-    settings.EXTERNAL_FILES["../../lib/win64/libvlc.dll"] = "lib/windows/libvlc.dll"
-    settings.EXTERNAL_FILES["../../lib/win64/libvlccore.dll"] = "lib/windows/libvlccore.dll"
-    settings.EXTERNAL_FILES["../../lib/win64/libvlc_wrapper.dll"] = "lib/windows/libvlc_wrapper.dll"
+    settings.EXTERNAL_FILES["../../lib/win64/libvlc.dll"] = "libvlc.dll"
+    settings.EXTERNAL_FILES["../../lib/win64/libvlccore.dll"] = "libvlccore.dll"
+    settings.EXTERNAL_FILES["../../lib/win64/libvlc_wrapper.dll"] = "libvlc_wrapper.dll"
 
 elseif os.name() == "Linux" then
     settings.EXTERNAL_FILES["../../lib/linux/libvlc_wrapper.so"] = "lib/linux/libvlc_wrapper.so"

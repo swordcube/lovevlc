@@ -1,11 +1,25 @@
 local jit = require("jit")
 local ffi = require("ffi")
 
-local libdir = _G.LOVEVLC_LIB_DIRECTORY or "lib"
+local libdir = _G.LOVEVLC_LIB_DIRECTORY or ""
 local plugindir = _G.LOVEVLC_PLUGIN_DIRECTORY or "plugins"
 
 local osm = os
 local os = jit and jit.os or ffi.os
+
+function string.lastIndexOf(self, sub)
+    local subStringLength = #sub
+    local lastIndex = -1
+
+    for i = 1, #self - subStringLength + 1 do
+        local currentSubstring = self:sub(i, i + subStringLength - 1)
+        if currentSubstring == sub then
+            lastIndex = i
+        end
+    end
+
+    return lastIndex
+end
 
 -- add os.setenv for plugin folder!
 if os == "Windows" then
@@ -20,7 +34,7 @@ if os == "Windows" then
     end
 else
     ffi.cdef[[
-      int setenv(const char *name, const char *value, int overwrite);
+        int setenv(const char *name, const char *value, int overwrite);
     ]]
     --- Sets an environment variable in the current process
     --- @param name string
@@ -29,26 +43,26 @@ else
         ffi.C.setenv(name, value, 1)
     end
 end
-print(love.filesystem.getExecutablePath())
 if os == "Windows" or os == "OSX" then
     -- make sure to set plugin path or else it won't work on windows !   lol!
-    local pp = love.filesystem.getExecutablePath() .. "/" .. plugindir .. "/" .. os -- hehe
-    os.setenv("VLC_PLUGIN_PATH", pp)
+    local execPath = love.filesystem.getExecutablePath():gsub("\\", "/")
+    local pp = execPath:sub(1, execPath:lastIndexOf("/") - 1) .. "/" .. plugindir .. "/" .. os -- hehe
+    osm.setenv("VLC_PLUGIN_PATH", pp:gsub("/", "\\"))
 end
 
 local extension = os == "Windows" and "dll" or os == "Linux" and "so" or os == "OSX" and "dylib"
 package.cpath = string.format("%s;%s/?.%s", package.cpath, libdir, extension)
 
 -- this isn't technically used, but needs to be loaded for libvlc to load on windows!
-local vlccore = os == "Windows" and ffi.load(assert(package.searchpath("win64/libvlccore", package.cpath)):gsub("/", "\\")) or ffi.load("libvlccore")
+local vlccore = os == "Windows" and ffi.load(assert(package.searchpath("libvlccore", package.cpath)):gsub("/", "\\")) or ffi.load("libvlccore")
 
 -- this IS used though
-local vlc = os == "Windows" and ffi.load(assert(package.searchpath("win64/libvlc", package.cpath)):gsub("/", "\\")) or ffi.load("libvlc")
+local vlc = os == "Windows" and ffi.load(assert(package.searchpath("libvlc", package.cpath)):gsub("/", "\\")) or ffi.load("libvlc")
 local vlcWrapper = nil
 
 if os == "Windows" then
     -- windows (load dll from win64 folder)
-    vlcWrapper = ffi.load(assert(package.searchpath("win64/libvlc_wrapper", package.cpath)))
+    vlcWrapper = ffi.load(assert(package.searchpath("libvlc_wrapper", package.cpath)))
     
 elseif os == "Linux" then
     -- linux (load so from linux folder)
@@ -74,8 +88,10 @@ ffi.cdef [[\
     unsigned char* luavlc_new_pixel_buffer(unsigned int width, unsigned int height);
     unsigned char* luavlc_free_pixel_buffer(unsigned char* pixelBuffer);
     
+    void video_setup_format(libvlc_media_player_t *mp, unsigned int width, unsigned int height);
     void video_use_unlock_callback(libvlc_media_player_t *mp, void *opaque);
     void video_use_all_callbacks(libvlc_media_player_t *mp, void *opaque);
+
     bool can_update_texture(void);
 ]]
 
@@ -150,7 +166,7 @@ function love.update(dt)
                 luaVlcVideo.width = cw[0]
                 luaVlcVideo.height = ch[0]
 
-                vlc.libvlc_video_set_format(vlcData.mediaPlayer, "RV24", w, h, w * 3)
+                vlc.libvlc_video_set_format(vlcData.mediaPlayer, "RGBA", w, h, w * 4)
                 luaVlcVideo.pixelBuffer = vlcWrapper.luavlc_new_pixel_buffer(w, h)
                 vlcWrapper.video_use_all_callbacks(vlcData.mediaPlayer, ffi.cast("void*", luaVlcVideo.pixelBuffer))
                 
@@ -175,26 +191,26 @@ function love.update(dt)
             -- loveImageData:mapPixel(updatePixel)
 
             -- method 3 (ffi way, Might be faster)
-            -- local ptr = ffi.cast("unsigned char*", loveImageData:getFFIPointer())
-            -- ffi.copy(ptr, luaVlcVideo.pixelBuffer, loveImageData:getWidth() * loveImageData:getHeight() * 3)
+            local ptr = ffi.cast("unsigned char*", loveImageData:getFFIPointer())
+            ffi.copy(ptr, luaVlcVideo.pixelBuffer, loveImageData:getWidth() * loveImageData:getHeight() * 4)
 
-            local w, h = loveImageData:getWidth(), loveImageData:getHeight()
-            local src = ffi.cast("unsigned char*", luaVlcVideo.pixelBuffer) -- RGB8 source
-            local dst = ffi.cast("unsigned char*", loveImageData:getFFIPointer())  -- RGBA8 destination
+            -- local w, h = loveImageData:getWidth(), loveImageData:getHeight()
+            -- local src = ffi.cast("unsigned char*", luaVlcVideo.pixelBuffer) -- RGB8 source
+            -- local dst = ffi.cast("unsigned char*", loveImageData:getFFIPointer())  -- RGBA8 destination
 
-            local srcIndex, dstIndex = 0, 0
-            local numPixels = w * h
+            -- local srcIndex, dstIndex = 0, 0
+            -- local numPixels = w * h
 
-            for _ = 0, numPixels - 1 do
-                -- Copy R,G,B
-                dst[dstIndex] = src[srcIndex] -- R
-                dst[dstIndex + 1] = src[srcIndex + 1] -- G
-                dst[dstIndex + 2] = src[srcIndex + 2] -- B
-                dst[dstIndex + 3] = 255              -- A (fully opaque)
+            -- for _ = 0, numPixels - 1 do
+            --     -- convert bgra back to rgba
+            --     dst[dstIndex] = src[srcIndex + 2] -- B
+            --     dst[dstIndex + 1] = src[srcIndex + 1] -- G
+            --     dst[dstIndex + 2] = src[srcIndex + 0] -- R
+            --     dst[dstIndex + 3] = src[srcIndex + 3] -- A
 
-                srcIndex = srcIndex + 3
-                dstIndex = dstIndex + 4
-            end
+            --     srcIndex = srcIndex + 4
+            --     dstIndex = dstIndex + 4
+            -- end
             loveImage:replacePixels(loveImageData)
         end
     end

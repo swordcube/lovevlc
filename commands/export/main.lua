@@ -76,8 +76,8 @@ end
 if CLEAN_BUILD then
     print("Clearing previous build...\n----------------------------------")
     if os.name() == "Windows" then
-        os.execute("rd /S /Q \"" .. EXPORT_DIR .. "\" > nul")
-        os.execute("mkdir \"" .. EXPORT_DIR .. "\" >nul")
+        os.execute("rd /S /Q \"" .. EXPORT_DIR .. "\" > nul 2>&1")
+        os.execute("mkdir \"" .. EXPORT_DIR .. "\" > nul 2>&1")
     else
         os.execute("rm -rf " .. EXPORT_DIR)
         os.execute("mkdir -p " .. EXPORT_DIR .. "")
@@ -95,8 +95,8 @@ local EXTERNAL_FILES = EXPORT_SETTINGS.EXTERNAL_FILES
 
 for _, folder in ipairs(FOLDERS_TO_COPY) do
     if os.name() == "Windows" then
-        os.execute("mkdir \"" .. EXPORT_DIR .. "/" .. folder .. "\" > nul")
-        os.execute("Xcopy ..\\..\\" .. folder .. " \"" .. EXPORT_DIR .. "/" .. folder .. "\" /E /H /C /I /Y > nul")
+        os.execute("mkdir \"" .. EXPORT_DIR .. "/" .. folder .. "\" > nul 2>&1")
+        os.execute("Xcopy ..\\..\\" .. folder .. " \"" .. EXPORT_DIR .. "/" .. folder .. "\" /E /H /C /I /Y > nul 2>&1")
     else
         os.execute("mkdir -p " .. EXPORT_DIR .. "/" .. folder)
         os.execute("cp -r ../../" .. folder .. " " .. EXPORT_DIR)
@@ -107,6 +107,12 @@ print("Exporting a " .. EXPORT_TYPE .. " build...\n-----------------------------
 
 local LOVE_PATH = EXPORT_SETTINGS.LOVE_PATH
 local EXECUTABLE_NAME = EXPORT_SETTINGS.EXECUTABLE_NAME
+
+local function isdir(sPath)
+    local ext = sPath:match("^.+(%..+)$")
+    return not ext or ext == ""
+end
+
 
 local chosenLovePath = LOVE_PATH[os.name():upper()]
 if os.name() == "Windows" then
@@ -120,7 +126,7 @@ if os.name() == "Windows" then
     for _, folder in ipairs(FILES_TO_EXCLUDE) do
         zipCmd = zipCmd .. " -xr!../../" .. folder
     end
-    local success = os.execute(zipCmd .. " > nul")
+    local success = os.execute(zipCmd .. " > nul 2>&1")
     if not success then
         print("An error occured while zipping the game, cannot continue!\n----------------------------------")
         os.exit(1)
@@ -130,25 +136,26 @@ if os.name() == "Windows" then
     -- copy every love2d dll we possibly can to the export folder
     -- this sucks
     --                            too bad.
-    os.execute("copy \"" .. chosenLovePath .. "\\love.dll\" \"" .. EXPORT_DIR .. "/love.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\lua51.dll\" \"" .. EXPORT_DIR .. "/lua51.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\SDL3.dll\" \"" .. EXPORT_DIR .. "/SDL3.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\OpenAL32.dll\" \"" .. EXPORT_DIR .. "/OpenAL32.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\mpg123.dll\" \"" .. EXPORT_DIR .. "/mpg123.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\msvcp120.dll\" \"" .. EXPORT_DIR .. "/msvcp120.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\msvcp140.dll\" \"" .. EXPORT_DIR .. "/msvcp140.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\msvcp140_1.dll\" \"" .. EXPORT_DIR .. "/msvcp140_1.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\msvcp140_2.dll\" \"" .. EXPORT_DIR .. "/msvcp140_2.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\msvcp140_atomic_wait.dll\" \"" .. EXPORT_DIR .. "/msvcp140_atomic_wait.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\msvcp140_codecvt_ids.dll\" \"" .. EXPORT_DIR .. "/msvcp140_codecvt_ids.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\msvcr120.dll\" \"" .. EXPORT_DIR .. "/msvcr120.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\msvcr140.dll\" \"" .. EXPORT_DIR .. "/msvcr140.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\vcruntime140.dll\" \"" .. EXPORT_DIR .. "/vcruntime140.dll\" > nul")
-    os.execute("copy \"" .. chosenLovePath .. "\\vcruntime140_1.dll\" \"" .. EXPORT_DIR .. "/vcruntime140_1.dll\" > nul")
+    os.execute("copy \"" .. chosenLovePath .. "\\love.dll\" \"" .. EXPORT_DIR .. "/love.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\lua51.dll\" \"" .. EXPORT_DIR .. "/lua51.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\SDL3.dll\" \"" .. EXPORT_DIR .. "/SDL3.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\OpenAL32.dll\" \"" .. EXPORT_DIR .. "/OpenAL32.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\mpg123.dll\" \"" .. EXPORT_DIR .. "/mpg123.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\msvcp120.dll\" \"" .. EXPORT_DIR .. "/msvcp120.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\msvcp140.dll\" \"" .. EXPORT_DIR .. "/msvcp140.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\msvcp140_1.dll\" \"" .. EXPORT_DIR .. "/msvcp140_1.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\msvcp140_2.dll\" \"" .. EXPORT_DIR .. "/msvcp140_2.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\msvcp140_atomic_wait.dll\" \"" .. EXPORT_DIR .. "/msvcp140_atomic_wait.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\msvcp140_codecvt_ids.dll\" \"" .. EXPORT_DIR .. "/msvcp140_codecvt_ids.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\msvcr120.dll\" \"" .. EXPORT_DIR .. "/msvcr120.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\msvcr140.dll\" \"" .. EXPORT_DIR .. "/msvcr140.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\vcruntime140.dll\" \"" .. EXPORT_DIR .. "/vcruntime140.dll\" > nul 2>&1")
+    os.execute("copy \"" .. chosenLovePath .. "\\vcruntime140_1.dll\" \"" .. EXPORT_DIR .. "/vcruntime140_1.dll\" > nul 2>&1")
 
     -- create temporary executable & copy icon to export dir
-    -- os.execute("copy /b \"" .. chosenLovePath .. "\\love.exe\" TEMPORARY_EXECUTABLE.exe > nul")
-    -- os.execute("copy ..\\..\\icon.ico \"" .. EXPORT_DIR .. "/icon.ico\" > nul")
+    local exe = EXPORT_TYPE == "debug" and "lovec" or "love"
+    os.execute("copy /b \"" .. chosenLovePath .. "\\" .. exe .. ".exe\" TEMPORARY_EXECUTABLE.exe > nul 2>&1")
+    -- os.execute("copy ..\\..\\icon.ico \"" .. EXPORT_DIR .. "/icon.ico\" > nul 2>&1")
     
     -- set icon and version info in temp executable
     -- os.execute("rcedit.exe TEMPORARY_EXECUTABLE.exe --set-icon \"" .. EXPORT_DIR .. "/icon.ico\"")
@@ -160,7 +167,7 @@ if os.name() == "Windows" then
     os.execute("rcedit.exe TEMPORARY_EXECUTABLE.exe --set-version-string \"FileDescription\" \"funkin.lua\"")
     
     -- create the new game executable by merging the temp executable with the .love file
-    os.execute("copy /b TEMPORARY_EXECUTABLE.exe + game.love \"" .. EXPORT_DIR .. "/" .. EXECUTABLE_NAME .. "\" > nul")
+    os.execute("copy /b TEMPORARY_EXECUTABLE.exe + game.love \"" .. EXPORT_DIR .. "/" .. EXECUTABLE_NAME .. "\" > nul 2>&1 2>&1")
 
     -- remove temporary junk
     os.remove("game.love")
@@ -168,7 +175,12 @@ if os.name() == "Windows" then
 
     -- copy external files to export directory
     for raw, save in pairs(EXTERNAL_FILES) do
-        os.execute("copy \"" .. raw:gsub("/", "\\") .. "\"" .. " \"" .. EXPORT_DIR:gsub("/", "\\") .. "\\" .. save .. "\"")
+        local folderPath = EXPORT_DIR:gsub("/", "\\") .. "\\" .. save:gsub("/", "\\")
+        folderPath = folderPath:sub(1, folderPath:lastIndexOf("\\"))
+        os.execute("mkdir \"" .. folderPath .. "\" > nul 2>&1 2>&1")
+
+        local letter = isdir(raw:gsub("/", "\\")) and "d" or "f"
+        os.execute("echo " .. letter .. " | Xcopy \"" .. raw:gsub("/", "\\") .. "\"" .. " \"" .. EXPORT_DIR:gsub("/", "\\") .. "\\" .. save:gsub("/", "\\") .. "\" /E /H /C /I /Y > nul 2>&1")
     end
     -- copy discord rpc dll file to export directory
     -- os.execute("copy \"..\\..\\libs\\windows\\discord-rpc.dll\"" .. " \"" .. EXPORT_DIR .. "/discord-rpc.dll\"")
