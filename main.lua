@@ -1,8 +1,11 @@
 local jit = require("jit")
 local ffi = require("ffi")
 
-local libdir = _G.LOVEVLC_LIB_DIRECTORY or ""
-local plugindir = _G.LOVEVLC_PLUGIN_DIRECTORY or "plugins"
+_G.LOVEVLC_LIB_DIRECTORY = os.getenv("LOVEVLC_LIB_DIRECTORY")
+_G.LOVEVLC_PLUGIN_DIRECTORY = os.getenv("LOVEVLC_PLUGIN_DIRECTORY")
+
+local libdir = _G.LOVEVLC_LIB_DIRECTORY or "" -- default to current executable directory
+local plugindir = _G.LOVEVLC_PLUGIN_DIRECTORY or "plugins" -- default to "plugins" in current executable directory
 
 local osm = os
 local os = jit and jit.os or ffi.os
@@ -66,15 +69,20 @@ if os == "Windows" then
     
 elseif os == "Linux" then
     -- linux (load so from linux folder)
-    vlcWrapper = ffi.load(assert(package.searchpath("linux/libvlc_wrapper", package.cpath)))
+    vlcWrapper = ffi.load(assert(package.searchpath("libvlc_wrapper", package.cpath)))
     
 elseif os == "OSX" then
     -- macos (load dylib from mac folder)
-    vlcWrapper = ffi.load(assert(package.searchpath("mac/libvlc_wrapper", package.cpath)))
+    vlcWrapper = ffi.load(assert(package.searchpath("libvlc_wrapper", package.cpath)))
 else
     error(("Unsupported OS: %s"):format(os))
 end
+local openal = os == "Windows" and ffi.load(assert(package.searchpath("OpenAL32", package.cpath))) or ffi.C
+
 require("libvlc_h")
+require("al_h")
+require("alc_h")
+
 ffi.cdef [[\
     typedef struct {
         unsigned char* pixelBuffer;
@@ -167,10 +175,13 @@ function love.update(dt)
                 luaVlcVideo.height = ch[0]
 
                 vlc.libvlc_video_set_format(vlcData.mediaPlayer, "RGBA", w, h, w * 4)
-                luaVlcVideo.pixelBuffer = vlcWrapper.luavlc_new_pixel_buffer(w, h)
+                -- luaVlcVideo.pixelBuffer = vlcWrapper.luavlc_new_pixel_buffer(w, h)
+
+                loveImageData = love.image.newImageData(w, h, "rgba8")
+                luaVlcVideo.pixelBuffer = loveImageData:getFFIPointer()
+
                 vlcWrapper.video_use_all_callbacks(vlcData.mediaPlayer, ffi.cast("void*", luaVlcVideo.pixelBuffer))
                 
-                loveImageData = love.image.newImageData(w, h, "rgba8")
                 loveImage = love.graphics.newImage(loveImageData)
                 
                 renderedVideo = true
@@ -179,38 +190,8 @@ function love.update(dt)
     else
         local state = vlc.libvlc_media_player_get_state(vlcData.mediaPlayer)
         if state == 3 and vlcWrapper.can_update_texture() and loveImageData then
-            -- method 1 (slow)
-            -- for x = 1, loveImageData:getWidth() do
-            --     for y = 1, loveImageData:getHeight() do
-            --         local idx = ((x - 1) + ((y - 1) * loveImageData:getWidth())) * 3
-            --         loveImageData:setPixel(x - 1, y - 1, tonumber(luaVlcVideo.pixelBuffer[idx + 0]) / 255, tonumber(luaVlcVideo.pixelBuffer[idx + 1]) / 255, tonumber(luaVlcVideo.pixelBuffer[idx + 2]) / 255, 1)
-            --     end
-            -- end
-
-            -- method 2 (faster, but still quite slow)
-            -- loveImageData:mapPixel(updatePixel)
-
-            -- method 3 (ffi way, Might be faster)
-            local ptr = ffi.cast("unsigned char*", loveImageData:getFFIPointer())
-            ffi.copy(ptr, luaVlcVideo.pixelBuffer, loveImageData:getWidth() * loveImageData:getHeight() * 4)
-
-            -- local w, h = loveImageData:getWidth(), loveImageData:getHeight()
-            -- local src = ffi.cast("unsigned char*", luaVlcVideo.pixelBuffer) -- RGB8 source
-            -- local dst = ffi.cast("unsigned char*", loveImageData:getFFIPointer())  -- RGBA8 destination
-
-            -- local srcIndex, dstIndex = 0, 0
-            -- local numPixels = w * h
-
-            -- for _ = 0, numPixels - 1 do
-            --     -- convert bgra back to rgba
-            --     dst[dstIndex] = src[srcIndex + 2] -- B
-            --     dst[dstIndex + 1] = src[srcIndex + 1] -- G
-            --     dst[dstIndex + 2] = src[srcIndex + 0] -- R
-            --     dst[dstIndex + 3] = src[srcIndex + 3] -- A
-
-            --     srcIndex = srcIndex + 4
-            --     dstIndex = dstIndex + 4
-            -- end
+            -- we don't need to update the pixels here since
+            -- we passed the ffi pointer to them directly to vlc
             loveImage:replacePixels(loveImageData)
         end
     end
@@ -220,17 +201,25 @@ function love.draw()
     if loveImage then
         love.graphics.draw(loveImage, 0, 0, 0, love.graphics.getWidth() / loveImageData:getWidth(), love.graphics.getHeight() / loveImageData:getHeight())
     end
+    love.graphics.setColor(0, 0, 0, 0.75)
+    love.graphics.rectangle("fill", 0, 0, 100, 30)
+    love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print(love.timer.getFPS() .. " FPS", 10, 3)
 end
 
 function love.quit()
-    -- free the luavlc pixel buffer
-    vlcWrapper.luavlc_free_pixel_buffer(luaVlcVideo.pixelBuffer)
-
     -- kill the media player
     vlc.libvlc_media_player_stop(vlcData.mediaPlayer)
     vlc.libvlc_media_player_release(vlcData.mediaPlayer)
-
+    
     -- kill the vlc instance
     vlc.libvlc_release(vlcData.inst)
+    
+    -- free any love2d resources
+    if loveImageData then
+        loveImageData:release()
+    end
+    if loveImage then
+        loveImage:release()
+    end
 end

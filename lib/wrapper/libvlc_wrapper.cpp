@@ -57,10 +57,6 @@ extern "C" {
         return _can_update_texture;
     }
 
-    EXPORT_DLL void video_setup_format(libvlc_media_player_t *mp, unsigned int width, unsigned int height) {
-        libvlc_video_set_format(mp, "RV32", width, height, width * 4);
-    }
-
     EXPORT_DLL void video_use_unlock_callback(libvlc_media_player_t *mp, void *opaque) {
         libvlc_video_set_callbacks(mp, NULL, NULL, display_cb, opaque);
     }

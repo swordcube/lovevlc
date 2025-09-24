@@ -48,6 +48,6 @@ if os.name() == "Windows" then
     settings.EXTERNAL_FILES["../../lib/win64/libvlc_wrapper.dll"] = "libvlc_wrapper.dll"
 
 elseif os.name() == "Linux" then
-    settings.EXTERNAL_FILES["../../lib/linux/libvlc_wrapper.so"] = "lib/linux/libvlc_wrapper.so"
+    settings.EXTERNAL_FILES["../../lib/linux/libvlc_wrapper.so"] = "libvlc_wrapper.so"
 end
 return settings
