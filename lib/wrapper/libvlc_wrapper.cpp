@@ -24,6 +24,27 @@ extern "C" {
         return video;
     }
 
+    EXPORT_DLL libvlc_instance_t* luavlc_new_vlc_instance() {
+        const char *argshit[] = {
+            "--ignore-config",
+            "--drop-late-frames",
+            "--aout=none",
+            "--intf=none",
+            "--vout=none",
+            "--no-interact",
+            "--no-keyboard-events",
+            "--no-mouse-events",
+            "--no-lua",
+            "--no-snapshot-preview",
+            "--no-sub-autodetect-file",
+            "--no-video-title-show",
+            "--no-volume-save",
+            "--no-xlib",
+            "--verbose=-1"
+        };
+        return libvlc_new(15, argshit);
+    }
+
     EXPORT_DLL unsigned char* luavlc_new_pixel_buffer(unsigned int width, unsigned int height) {
         return (unsigned char*)malloc(width * height * 3);
     }
