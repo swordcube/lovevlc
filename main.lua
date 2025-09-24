@@ -7,7 +7,8 @@ local os = jit and jit.os or ffi.os
 local extension = os == "Windows" and "dll" or os == "Linux" and "so" or os == "OSX" and "dylib"
 package.cpath = string.format("%s;%s/?.%s", package.cpath, libdir, extension)
 
-local vlc = ffi.os == "Windows" and ffi.load(assert(package.searchpath("win64/libvlc", package.cpath)):gsub("/", "\\")) or ffi.load("libvlc")
+local vlccore = os == "Windows" and ffi.load(assert(package.searchpath("win64/libvlccore", package.cpath)):gsub("/", "\\")) or ffi.load("libvlccore")
+local vlc = os == "Windows" and ffi.load(assert(package.searchpath("win64/libvlc", package.cpath)):gsub("/", "\\")) or ffi.load("libvlc")
 local vlcWrapper = nil
 
 if os == "Windows" then
