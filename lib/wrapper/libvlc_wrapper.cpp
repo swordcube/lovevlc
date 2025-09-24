@@ -49,7 +49,7 @@ extern "C" {
         return NULL;
     }
 
-    void unlock_cb(void *opaque, void *picture, void *const *planes) {
+    void display_cb(void *opaque, void *picture) {
         _can_update_texture = true;
     }
 
@@ -62,10 +62,10 @@ extern "C" {
     }
 
     EXPORT_DLL void video_use_unlock_callback(libvlc_media_player_t *mp, void *opaque) {
-        libvlc_video_set_callbacks(mp, NULL, unlock_cb, NULL, opaque);
+        libvlc_video_set_callbacks(mp, NULL, NULL, display_cb, opaque);
     }
     
     EXPORT_DLL void video_use_all_callbacks(libvlc_media_player_t *mp, void *opaque) {
-        libvlc_video_set_callbacks(mp, lock_cb, unlock_cb, NULL, opaque);
+        libvlc_video_set_callbacks(mp, lock_cb, NULL, display_cb, opaque);
     }
 }
