@@ -1,32 +1,7 @@
 local jit = require("jit")
 local ffi = require("ffi")
 
-require("libvlc_h")
-ffi.cdef [[\
-    typedef struct {
-        unsigned char* pixelBuffer;
-        unsigned int width;
-        unsigned int height;
-    } LuaVLC_Video;
-
-    LuaVLC_Video luavlc_new(void);
-    LuaVLC_Video luavlc_free(LuaVLC_Video video);
-
-    unsigned char* luavlc_new_pixel_buffer(unsigned int width, unsigned int height);
-    unsigned char* luavlc_free_pixel_buffer(unsigned char* pixelBuffer);
-    
-    void video_use_unlock_callback(libvlc_media_player_t *mp, void *opaque);
-    void video_use_all_callbacks(libvlc_media_player_t *mp, void *opaque);
-    bool can_update_texture(void);
-]]
-
 local libdir = _G.LOVEVLC_LIB_DIRECTORY or "lib"
-local sourceBaseDir = os.getenv("OWD") -- use OWD for linux app image support
-if not sourceBaseDir then
-    sourceBaseDir = love.filesystem.getWorkingDirectory()
-end
-libdir = sourceBaseDir .. "/" .. libdir
-love.filesystem.mountFullPath(sourceBaseDir, "")
 local os = jit and jit.os or ffi.os
 
 local extension = os == "Windows" and "dll" or os == "Linux" and "so" or os == "OSX" and "dylib"
@@ -49,6 +24,24 @@ elseif os == "OSX" then
 else
     error(("Unsupported OS: %s"):format(os))
 end
+require("libvlc_h")
+ffi.cdef [[\
+    typedef struct {
+        unsigned char* pixelBuffer;
+        unsigned int width;
+        unsigned int height;
+    } LuaVLC_Video;
+
+    LuaVLC_Video luavlc_new(void);
+    LuaVLC_Video luavlc_free(LuaVLC_Video video);
+
+    unsigned char* luavlc_new_pixel_buffer(unsigned int width, unsigned int height);
+    unsigned char* luavlc_free_pixel_buffer(unsigned char* pixelBuffer);
+    
+    void video_use_unlock_callback(libvlc_media_player_t *mp, void *opaque);
+    void video_use_all_callbacks(libvlc_media_player_t *mp, void *opaque);
+    bool can_update_texture(void);
+]]
 
 local vlcData = {
     inst = nil,
