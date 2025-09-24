@@ -70,8 +70,6 @@ ffi.cdef [[\
     LuaVLC_Video luavlc_new(void);
     LuaVLC_Video luavlc_free(LuaVLC_Video video);
 
-    libvlc_instance_t* luavlc_new_vlc_instance(void);
-
     unsigned char* luavlc_new_pixel_buffer(unsigned int width, unsigned int height);
     unsigned char* luavlc_free_pixel_buffer(unsigned char* pixelBuffer);
     
@@ -90,32 +88,31 @@ local luaVlcVideo = nil
 local loveImageData = nil --- @type love.ImageData
 local loveImage = nil --- @type love.Image
 
-function love.load()
-    -- local args = {
-    --     "--ignore-config",
-    --     "--drop-late-frames",
-    --     "--aout=none",
-    --     "--intf=none",
-    --     "--vout=none",
-    --     "--no-interact",
-    --     "--no-keyboard-events",
-    --     "--no-mouse-events",
-    --     "--no-lua",
-    --     "--no-snapshot-preview",
-    --     "--no-sub-autodetect-file",
-    --     "--no-video-title-show",
-    --     "--no-volume-save",
-    --     "--no-xlib",
-    --     "--verbose=-1"
-    -- }
-    -- local argsPtr = ffi.new("const char *[?]", #args)
-    -- for i = 1, #args do
-    --     argsPtr[i - 1] = ffi.cast("const char *", args[i])
-    -- end
-    -- vlcData.inst = vlc.libvlc_new(#args, argsPtr)
-    vlcData.inst = vlcWrapper.luavlc_new_vlc_instance()
+function love.load(gameArgs)
+    local args = {
+        "--ignore-config",
+        "--drop-late-frames",
+        "--aout=none",
+        "--intf=none",
+        "--vout=none",
+        "--no-interact",
+        "--no-keyboard-events",
+        "--no-mouse-events",
+        "--no-lua",
+        "--no-snapshot-preview",
+        "--no-sub-autodetect-file",
+        "--no-video-title-show",
+        "--no-volume-save",
+        "--no-xlib",
+        "--verbose=3"
+    }
+    local argsPtr = ffi.new("const char *[?]", #args)
+    for i = 1, #args do
+        argsPtr[i - 1] = ffi.cast("const char *", args[i])
+    end
+    vlcData.inst = vlc.libvlc_new(#args, argsPtr)
 
-    local media = vlc.libvlc_media_new_path(vlcData.inst, "/mnt/B64005D340059AEF/Refresh/Videos/Attention_ADHD_people.mp4")
+    local media = vlc.libvlc_media_new_path(vlcData.inst, gameArgs[1])
     vlcData.mediaPlayer = vlc.libvlc_media_player_new_from_media(media)
     vlc.libvlc_media_release(media)
 
