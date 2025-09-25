@@ -26,9 +26,12 @@ extern "C" {
         ALenum format;
         unsigned sampleRate;
         unsigned int frameSize;
+        unsigned int bufferPoolCount = 0;
     } LuaVLC_Audio;
 
+    static const int MAX_BUFFER_COUNT = 255;
     static bool _can_update_texture = false;
+
     static int _alUseEXTFLOAT32 = -1;
     static int _alUseEXTMCFORMATS = -1;
 
@@ -102,19 +105,47 @@ extern "C" {
     }
 
     void audio_play(void *data, const void *samples, unsigned count, int64_t pts) {
-        // TODO: handle it.
+        LuaVLC_Audio* audio = (LuaVLC_Audio*)data;
+        if(audio == NULL || audio == nullptr || audio->source == 0)
+            return;
+
+        // TODO: this shit.
     }
 
     void audio_resume(void *data, int64_t pts) {
-        // TODO: handle it.
+        LuaVLC_Audio* audio = (LuaVLC_Audio*)data;
+        if(audio == NULL || audio == nullptr || audio->source == 0)
+            return;
+
+        ALint state;
+        alGetSourcei(audio->source, AL_SOURCE_STATE, &state);
+
+        if(state == AL_PAUSED)
+            alSourcePlay(audio->source);
     }
 
     void audio_pause(void *data, int64_t pts) {
-        // TODO: handle it.
+        LuaVLC_Audio* audio = (LuaVLC_Audio*)data;
+        if(audio == NULL || audio == nullptr || audio->source == 0)
+            return;
+
+        ALint state;
+        alGetSourcei(audio->source, AL_SOURCE_STATE, &state);
+
+        if(state != AL_PAUSED)
+            alSourcePause(audio->source);
     }
 
     void audio_flush(void *data, int64_t pts) {
-        // TODO: handle it.
+        LuaVLC_Audio* audio = (LuaVLC_Audio*)data;
+        if(audio == NULL || audio == nullptr || audio->source == 0)
+            return;
+
+        ALint state;
+        alGetSourcei(audio->source, AL_SOURCE_STATE, &state);
+
+        if(state != AL_STOPPED)
+            alSourceStop(audio->source);
     }
 
     void audio_set_volume(void *data, float volume, bool mute) {
@@ -122,8 +153,10 @@ extern "C" {
     }
 
     int audio_setup(void **data, char *format, unsigned *p_rate, unsigned *p_channels) {
-        // TODO: handle it.
         LuaVLC_Audio* audio = (LuaVLC_Audio*)*data;
+        if(audio == NULL || audio == nullptr || audio->source == 0)
+            return 1;
+        
         if(_alUseEXTFLOAT32 == -1)
             _alUseEXTFLOAT32 = (int)alIsExtensionPresent("AL_EXT_FLOAT32");
 
@@ -132,9 +165,9 @@ extern "C" {
         
         audio->sampleRate = *p_rate;
         unsigned channels = *p_channels;
-
-        if(_alUseEXTMCFORMATS == 1 && channels > 0)
-            channels = 0;
+        
+        if(_alUseEXTMCFORMATS == 1 && channels > 8)
+            channels = 8;
         else if(channels > 2)
             channels = 2;
 
@@ -176,9 +209,9 @@ extern "C" {
     // luajit is being really strange and picky about the struct types
     EXPORT_DLL void video_setup_audio(void* p_audio, libvlc_media_player_t *mp) {
         LuaVLC_Audio* audio = (LuaVLC_Audio*)p_audio;
-        audio->buffers = (ALuint*)malloc(sizeof(ALuint) * 255);
+        audio->buffers = (ALuint*)malloc(sizeof(ALuint) * MAX_BUFFER_COUNT);
         alGenSources(1, &audio->source);
-        alGenBuffers(255, audio->buffers);
+        alGenBuffers(MAX_BUFFER_COUNT, audio->buffers);
 
         libvlc_audio_set_callbacks(mp, audio_play, audio_pause, audio_resume, audio_flush, NULL, audio);
         libvlc_audio_set_volume_callback(mp, audio_set_volume);
