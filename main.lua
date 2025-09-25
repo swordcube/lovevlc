@@ -93,14 +93,7 @@ ffi.cdef [[\
         unsigned int height;
     } LuaVLC_Video;
 
-    typedef struct {
-        ALuint *source;
-        ALuint *buffers;
-        ALenum format;
-        unsigned sampleRate;
-        unsigned int frameSize;
-        unsigned int bufferPoolCount;
-    } LuaVLC_Audio;
+    typedef struct LuaVLC_Audio LuaVLC_Audio;
 
     LuaVLC_Video luavlc_new(void);
     LuaVLC_Audio luavlc_audio_new(void);
@@ -162,7 +155,7 @@ love.graphics.newVideo = function(filename, settings)
 end
 
 function love.load(gameArgs)
-    love.audio.setVolume(0.5)
+    love.audio.setVolume(0.25)
 
     if not gameArgs[1] then
         error("You must specify a file path to a video file to play as an argument!")

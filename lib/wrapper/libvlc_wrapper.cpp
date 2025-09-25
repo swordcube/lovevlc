@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 
 #include "AL/al.h"
 #include "vlc/vlc.h"
@@ -22,7 +23,7 @@ extern "C" {
     
     typedef struct {
         ALuint source;
-        ALuint *buffers;
+        std::vector<ALuint> buffers;
         ALenum format;
         unsigned sampleRate;
         unsigned int frameSize;
@@ -69,14 +70,14 @@ extern "C" {
 
     EXPORT_DLL void luavlc_audio_free(LuaVLC_Audio audio) {
         alDeleteSources(1, &audio.source);
-        alDeleteBuffers(255, audio.buffers);
-        free((void*)audio.buffers);
+        alDeleteBuffers(MAX_BUFFER_COUNT, audio.buffers.data());
+        // free((void*)audio.buffers);
     }
 
     EXPORT_DLL void luavlc_audio_free_ptr(LuaVLC_Audio* audio) {
         alDeleteSources(1, &audio->source);
-        alDeleteBuffers(255, audio->buffers);
-        free((void*)audio->buffers);
+        alDeleteBuffers(MAX_BUFFER_COUNT, audio->buffers.data());
+        // free((void*)audio->buffers);
     }
 
     // i can't write this or unlock_cb function in lua code
@@ -104,12 +105,39 @@ extern "C" {
         libvlc_video_set_callbacks(mp, lock_cb, NULL, display_cb, opaque);
     }
 
-    void audio_play(void *data, const void *samples, unsigned count, int64_t pts) {
+    void audio_play(void *data, const void *rawSamples, unsigned count, int64_t pts) {
         LuaVLC_Audio* audio = (LuaVLC_Audio*)data;
         if(audio == NULL || audio == nullptr || audio->source == 0)
             return;
 
-        // TODO: this shit.
+        ALint nb;
+        alGetSourcei(audio->source, AL_BUFFERS_PROCESSED, &nb);
+        
+        if(nb > 0) {
+            ALuint* buffers;
+            alSourceUnqueueBuffers(audio->source, nb, buffers);
+    
+            for(int i = 0; i < nb; i++)
+                audio->buffers.push_back(buffers[i]);
+        }
+        if(audio->buffers.empty())
+            return;
+
+        ALuint buffer = audio->buffers.front();
+        audio->buffers.erase(audio->buffers.begin());
+        
+        alBufferData(buffer, audio->format, rawSamples, count * audio->frameSize, audio->sampleRate);
+        alSourceQueueBuffers(audio->source, 1, &buffer);
+
+        ALint state = 0;
+        alGetSourcei(audio->source, AL_SOURCE_STATE, &state);
+
+        // TODO: why the fuck is state always AL_STOPPED
+        
+        if(state != AL_PLAYING) {
+            printf("playing audio\n");
+            alSourcePlay(audio->source);
+        }
     }
 
     void audio_resume(void *data, int64_t pts) {
@@ -117,7 +145,7 @@ extern "C" {
         if(audio == NULL || audio == nullptr || audio->source == 0)
             return;
 
-        ALint state;
+        ALint state = 0;
         alGetSourcei(audio->source, AL_SOURCE_STATE, &state);
 
         if(state == AL_PAUSED)
@@ -209,9 +237,15 @@ extern "C" {
     // luajit is being really strange and picky about the struct types
     EXPORT_DLL void video_setup_audio(void* p_audio, libvlc_media_player_t *mp) {
         LuaVLC_Audio* audio = (LuaVLC_Audio*)p_audio;
-        audio->buffers = (ALuint*)malloc(sizeof(ALuint) * MAX_BUFFER_COUNT);
+        // audio->buffers = (ALuint*)malloc(sizeof(ALuint) * MAX_BUFFER_COUNT); 
         alGenSources(1, &audio->source);
-        alGenBuffers(MAX_BUFFER_COUNT, audio->buffers);
+
+        audio->buffers = {};
+        for(int i = 0; i < MAX_BUFFER_COUNT; i++) {
+            audio->buffers.push_back(0);
+            alGenBuffers(1, &audio->buffers[i]);
+        }
+        printf("generated buffers: %i\n", audio->buffers.size());
 
         libvlc_audio_set_callbacks(mp, audio_play, audio_pause, audio_resume, audio_flush, NULL, audio);
         libvlc_audio_set_volume_callback(mp, audio_set_volume);
