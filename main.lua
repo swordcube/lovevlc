@@ -158,6 +158,8 @@ love.graphics.newVideo = function(filename, settings)
 end
 
 function love.load(gameArgs)
+    love.audio.setVolume(0.05)
+
     if not gameArgs[1] then
         error("You must specify a file path to a video file to play as an argument!")
     end
@@ -199,8 +201,6 @@ function love.load(gameArgs)
     vlcWrapper.video_use_unlock_callback(vlcData.mediaPlayer, ffi.cast("void*", luaVlcVideo.pixelBuffer))
     vlcWrapper.video_setup_audio(luaVlcAudio, vlcData.mediaPlayer)
     vlc.libvlc_media_player_play(vlcData.mediaPlayer)
-
-    love.audio.setVolume(0.1)
 end
 
 function love.update(dt)
