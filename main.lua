@@ -96,6 +96,9 @@ ffi.cdef [[\
     typedef struct {
         ALuint *source;
         ALuint *buffers;
+        ALenum format;
+        unsigned sampleRate;
+        unsigned int frameSize;
     } LuaVLC_Audio;
 
     LuaVLC_Video luavlc_new(void);

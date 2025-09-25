@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <cstring>
 
 #include "AL/al.h"
 #include "vlc/vlc.h"
@@ -20,11 +21,16 @@ extern "C" {
     } LuaVLC_Video;
     
     typedef struct {
-        ALuint *source;
+        ALuint source;
         ALuint *buffers;
+        ALenum format;
+        unsigned sampleRate;
+        unsigned int frameSize;
     } LuaVLC_Audio;
 
     static bool _can_update_texture = false;
+    static int _alUseEXTFLOAT32 = -1;
+    static int _alUseEXTMCFORMATS = -1;
 
     EXPORT_DLL LuaVLC_Video luavlc_new() {
         LuaVLC_Video video;
@@ -59,13 +65,13 @@ extern "C" {
     }
 
     EXPORT_DLL void luavlc_audio_free(LuaVLC_Audio audio) {
-        alDeleteSources(1, audio.source);
+        alDeleteSources(1, &audio.source);
         alDeleteBuffers(255, audio.buffers);
         free((void*)audio.buffers);
     }
 
     EXPORT_DLL void luavlc_audio_free_ptr(LuaVLC_Audio* audio) {
-        alDeleteSources(1, audio->source);
+        alDeleteSources(1, &audio->source);
         alDeleteBuffers(255, audio->buffers);
         free((void*)audio->buffers);
     }
@@ -115,9 +121,55 @@ extern "C" {
         // TODO: handle it.
     }
 
-    int audio_setup(void **data, char *format, unsigned *rate, unsigned *channels) {
+    int audio_setup(void **data, char *format, unsigned *p_rate, unsigned *p_channels) {
         // TODO: handle it.
-        return 1;
+        LuaVLC_Audio* audio = (LuaVLC_Audio*)*data;
+        if(_alUseEXTFLOAT32 == -1)
+            _alUseEXTFLOAT32 = (int)alIsExtensionPresent("AL_EXT_FLOAT32");
+
+        if(_alUseEXTMCFORMATS == -1)
+            _alUseEXTMCFORMATS = (int)alIsExtensionPresent("AL_EXT_MCFORMATS");
+        
+        audio->sampleRate = *p_rate;
+        unsigned channels = *p_channels;
+
+        if(_alUseEXTMCFORMATS == 1 && channels > 0)
+            channels = 0;
+        else if(channels > 2)
+            channels = 2;
+
+        bool useFloat32 = _alUseEXTFLOAT32 == 1 && strcmp(format, "FL32") == 0;
+        memcpy(format, useFloat32 ? "FL32" : "S16N", 4);
+        
+        switch(channels) {
+            case 1:
+                audio->format = alGetEnumValue(useFloat32 ? "AL_FORMAT_MONO_FLOAT32" : "AL_FORMAT_MONO16");
+                channels = 1;
+                break;
+
+            case 2 | 3:
+                audio->format = alGetEnumValue(useFloat32 ? "AL_FORMAT_STEREO_FLOAT32" : "AL_FORMAT_STEREO16");
+                channels = 2;
+                break;
+
+            case 4:
+                audio->format = alGetEnumValue(useFloat32 ? "AL_FORMAT_QUAD32" : "AL_FORMAT_QUAD16");
+                channels = 4;
+                break;
+
+            case 5 | 6:
+                audio->format = alGetEnumValue(useFloat32 ? "AL_FORMAT_51CHN32" : "AL_FORMAT_51CHN16");
+                channels = 6;
+                break;
+
+            case 7 | 8:
+                audio->format = alGetEnumValue(useFloat32 ? "AL_FORMAT_71CHN32" : "AL_FORMAT_71CHN16");
+                channels = 8;
+                break;
+        }
+        audio->frameSize = (useFloat32 ? sizeof(float) : sizeof(int16_t)) * channels;
+        *p_channels = channels;
+        return 0;
     }
 
     // have to pass as a void* then cast to LuaVLC_Audio* because
@@ -125,7 +177,7 @@ extern "C" {
     EXPORT_DLL void video_setup_audio(void* p_audio, libvlc_media_player_t *mp) {
         LuaVLC_Audio* audio = (LuaVLC_Audio*)p_audio;
         audio->buffers = (ALuint*)malloc(sizeof(ALuint) * 255);
-        alGenSources(1, audio->source);
+        alGenSources(1, &audio->source);
         alGenBuffers(255, audio->buffers);
 
         libvlc_audio_set_callbacks(mp, audio_play, audio_pause, audio_resume, audio_flush, NULL, audio);
