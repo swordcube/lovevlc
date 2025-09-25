@@ -139,7 +139,7 @@ local oldnewvid = love.graphics.newVideo
 love.graphics.newVideo = function(filename, settings)
     local ext = filename:match("^.+(%..+)$")
     if ext == ".ogv" then
-        return love.graphics.newVideo(filename, settings)
+        return oldnewvid(filename, settings)
     end
     if type(settings) == "boolean" then
         settings = {audio = settings, dpiscale = 1}
