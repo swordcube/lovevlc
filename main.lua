@@ -123,6 +123,40 @@ local luaVlcAudio = nil
 local loveImageData = nil --- @type love.ImageData
 local loveImage = nil --- @type love.Image
 
+local oldnewvid = love.graphics.newVideo
+
+--- 
+--- Creates a new drawable Video. Supports most video formats thru LibVLC.
+--- 
+--- `.ogv` video files will use the default Love2D video implementation.
+--- 
+--- You cannot provide any `VideoStream`, only file names are accepted.
+--- 
+--- [Open in Browser](https://love2d.org/wiki/love.graphics.newVideo)
+--- 
+--- @overload fun(filename: string, settings?: table):love.Video
+--- @overload fun(filename: string, loadaudio?: boolean):love.Video
+love.graphics.newVideo = function(filename, settings)
+    local ext = filename:match("^.+(%..+)$")
+    if ext == ".ogv" then
+        return love.graphics.newVideo(filename, settings)
+    end
+    if type(settings) == "boolean" then
+        settings = {audio = settings, dpiscale = 1}
+    end
+    if not settings then
+        settings = {audio = false, dpiscale = 1}
+    end
+    if settings.audio == nil then
+        settings.audio = false
+    end
+    if settings.dpiscale == nil then
+        settings.dpiscale = 1
+    end
+    error("love.graphics.newVideo not implemented for VLC!")
+    print("NOTE: settings.dpiscale is currently ignored!")
+end
+
 function love.load(gameArgs)
     if not gameArgs[1] then
         error("You must specify a file path to a video file to play as an argument!")
