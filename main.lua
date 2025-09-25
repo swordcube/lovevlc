@@ -84,21 +84,30 @@ require("al_h")
 require("alc_h")
 
 ffi.cdef [[\
+    void free(void* a);
+    void* malloc(size_t size);
+
     typedef struct {
         unsigned char* pixelBuffer;
         unsigned int width;
         unsigned int height;
     } LuaVLC_Video;
 
-    LuaVLC_Video luavlc_new(void);
-    LuaVLC_Video luavlc_free(LuaVLC_Video video);
+    typedef struct {
+        ALuint *source;
+        ALuint *buffers;
+    } LuaVLC_Audio;
 
-    unsigned char* luavlc_new_pixel_buffer(unsigned int width, unsigned int height);
-    unsigned char* luavlc_free_pixel_buffer(unsigned char* pixelBuffer);
+    LuaVLC_Video luavlc_new(void);
+    LuaVLC_Audio luavlc_audio_new(void);
+    LuaVLC_Audio* luavlc_audio_new_ptr(void);
+
+    void luavlc_audio_free_ptr(void* audio);
     
     void video_setup_format(libvlc_media_player_t *mp, unsigned int width, unsigned int height);
     void video_use_unlock_callback(libvlc_media_player_t *mp, void *opaque);
     void video_use_all_callbacks(libvlc_media_player_t *mp, void *opaque);
+    void video_setup_audio(void* video, libvlc_media_player_t *mp);
 
     bool can_update_texture(void);
 ]]
@@ -109,6 +118,7 @@ local vlcData = {
 }
 local renderedVideo = false
 local luaVlcVideo = nil
+local luaVlcAudio = nil
 
 local loveImageData = nil --- @type love.ImageData
 local loveImage = nil --- @type love.Image
@@ -143,23 +153,20 @@ function love.load(gameArgs)
     local media = vlc.libvlc_media_new_path(vlcData.inst, gameArgs[1])
     vlcData.mediaPlayer = vlc.libvlc_media_player_new_from_media(media)
     vlc.libvlc_media_release(media)
-
+    
     renderedVideo = false
-
+    
     luaVlcVideo = vlcWrapper.luavlc_new()
     ffi.gc(luaVlcVideo, nil) -- NO GC FOR YOU
 
-    vlcWrapper.video_use_unlock_callback(vlcData.mediaPlayer, ffi.cast("void*", luaVlcVideo.pixelBuffer))
-    vlc.libvlc_media_player_play(vlcData.mediaPlayer)
-end
+    luaVlcAudio = vlcWrapper.luavlc_audio_new_ptr()
+    ffi.gc(luaVlcAudio, nil) -- NO GC FOR YOU x2
 
-local function updatePixel(x, y, r, g, b, a)
-    local idx = (x + (y * loveImageData:getWidth())) * 3
-    r = tonumber(luaVlcVideo.pixelBuffer[idx + 0]) / 255.0
-    g = tonumber(luaVlcVideo.pixelBuffer[idx + 1]) / 255.0
-    b = tonumber(luaVlcVideo.pixelBuffer[idx + 2]) / 255.0
-    a = 1.0 -- the pixel buffer is rgb8 only so we just have to force an alpha value of 1!
-    return r, g, b, a
+    vlcWrapper.video_use_unlock_callback(vlcData.mediaPlayer, ffi.cast("void*", luaVlcVideo.pixelBuffer))
+    vlcWrapper.video_setup_audio(luaVlcAudio, vlcData.mediaPlayer)
+    vlc.libvlc_media_player_play(vlcData.mediaPlayer)
+
+    love.audio.setVolume(0.1)
 end
 
 function love.update(dt)
@@ -183,7 +190,6 @@ function love.update(dt)
                 vlcWrapper.video_use_all_callbacks(vlcData.mediaPlayer, ffi.cast("void*", luaVlcVideo.pixelBuffer))
                 
                 loveImage = love.graphics.newImage(loveImageData)
-                
                 renderedVideo = true
             end
         end
@@ -214,6 +220,9 @@ function love.quit()
     
     -- kill the vlc instance
     vlc.libvlc_release(vlcData.inst)
+
+    -- free lauvlc audio struct stuff
+    vlcWrapper.luavlc_audio_free_ptr(luaVlcAudio)
     
     -- free any love2d resources
     if loveImageData then
