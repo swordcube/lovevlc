@@ -13,7 +13,7 @@ local chosenVideo = ""
 
 local video = nil --- @type love.Video
 local function playVideo()
-    video = love.graphics.newVideo(chosenVideo)
+    video = love.graphics.newVideo(chosenVideo, {audio = true})
     video:play()
 end
 
@@ -35,6 +35,8 @@ end
 function love.draw()
     if video then
         love.graphics.draw(video, 0, 0, 0, love.graphics.getWidth() / video:getWidth(), love.graphics.getHeight() / video:getHeight())
+    else
+        love.graphics.print("Loading...", love.graphics.getWidth() / 2 - 50, love.graphics.getHeight() / 2 - 10)
     end
     love.graphics.setColor(0, 0, 0, 0.75)
     love.graphics.rectangle("fill", 0, 0, 100, 30)
