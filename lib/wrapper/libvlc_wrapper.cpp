@@ -34,11 +34,31 @@ extern "C" {
         unsigned int frameSize = 0;
     } LuaVLC_Audio;
 
+    static libvlc_instance_t* _instance = nullptr;
+
     static const int MAX_BUFFER_COUNT = 255;
     static bool _can_update_texture = false;
 
     static int _alUseEXTFLOAT32 = -1;
     static int _alUseEXTMCFORMATS = -1;
+
+    EXPORT_DLL void luavlc_init_vlc(int argc, const char *const *argv) {
+        if(_instance != nullptr)
+            return;
+
+        _instance = libvlc_new(argc, argv);
+    }
+
+    EXPORT_DLL libvlc_instance_t* luavlc_get_vlc_instance() {
+        return _instance;
+    }
+
+    EXPORT_DLL void luavlc_free_vlc() {
+        if(_instance != nullptr) {
+            libvlc_release(_instance);
+            _instance = nullptr;
+        }
+    }
 
     EXPORT_DLL LuaVLC_Video luavlc_new() {
         LuaVLC_Video video = {0};
