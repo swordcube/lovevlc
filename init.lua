@@ -29,6 +29,14 @@ function string.lastIndexOf(self, sub)
 
     return lastIndex
 end
+function table.indexOf(table, element)
+    for i = 1, #table do
+        if table[i] == element then
+            return i
+        end
+    end
+    return -1
+end
 
 -- add os.setenv for plugin folder!
 if os == "Windows" then
@@ -114,6 +122,7 @@ if not love.graphics then
     return -- this file gets required for handle.initasync
 end
 local oldnewvid = love.graphics.newVideo
+local vids = {}
 
 --- 
 --- Creates a new drawable Video. Supports most video formats thru LibVLC.
@@ -196,6 +205,8 @@ love.graphics.newVideo = function(filename, settings)
             error("You can't access the " .. k .. " property from VLC audio source!", 2)
         end
     })
+    table.insert(vids, video)
+
     local media = libvlc.libvlc_media_new_path(libvlcWrapper.luavlc_get_vlc_instance(), filename)
     video._mediaPlayer = libvlc.libvlc_media_player_new_from_media(media)
     libvlc.libvlc_media_release(media)
@@ -237,6 +248,17 @@ love.graphics.newVideo = function(filename, settings)
 
         -- free luavlc audio struct stuff
         libvlcWrapper.luavlc_audio_free_ptr(v._luaVlcAudio)
+
+        -- free love2d resources
+        if v.imageData then
+            v.imageData:release()
+            v.imageData = nil
+        end
+        if v.image then
+            v.image:release()
+            v.image = nil
+        end
+        table.remove(vids, table.indexOf(vids, v))
     end
     video.getWidth = function(v)
         if not v.imageData then
@@ -304,4 +326,11 @@ love.graphics.draw = function(item, ...)
         return
     end
     return gfxDraw(item, ...)
+end
+local audioStop = love.audio.stop
+love.audio.stop = function()
+    for i = 1, #vids do
+        vids[i]:stop()
+    end
+    return audioStop()
 end
