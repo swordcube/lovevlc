@@ -151,16 +151,16 @@ love.graphics.newVideo = function(filename, settings)
         return oldnewvid(filename, settings)
     end
     if type(settings) == "boolean" then
-        settings = {audio = settings, dpiscale = 1}
+        settings = {audio = settings, dpiscale = love.graphics.getDPIScale()}
     end
     if not settings then
-        settings = {audio = false, dpiscale = 1}
+        settings = {audio = false, dpiscale = love.graphics.getDPIScale()}
     end
     if settings.audio == nil then
         settings.audio = false
     end
     if settings.dpiscale == nil then
-        settings.dpiscale = 1
+        settings.dpiscale = love.graphics.getDPIScale( )
     end
     if settings.options == nil then
         settings.options = {}
@@ -208,6 +208,9 @@ love.graphics.newVideo = function(filename, settings)
     table.insert(vids, video)
 
     local media = libvlc.libvlc_media_new_path(libvlcWrapper.luavlc_get_vlc_instance(), filename)
+    for i = 1, #settings.options do
+        libvlc.libvlc_media_add_option(media, settings.options[i])
+    end
     video._mediaPlayer = libvlc.libvlc_media_player_new_from_media(media)
     libvlc.libvlc_media_release(media)
 

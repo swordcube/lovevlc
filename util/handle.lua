@@ -78,6 +78,9 @@ function handle.initasync()
 end
 
 function handle.quit()
+    if not handle.instance then
+        return
+    end
     libvlc.libvlc_release(handle.instance)
 end
 
