@@ -1,10 +1,14 @@
-_G.LOVEVLC_PARENT = ...
+local parent = ...
+if not parent or #parent == 0 or parent == "init" then
+    parent = nil
+end
+_G.LOVEVLC_PARENT = parent
 
 local jit = require("jit")
 local ffi = require("ffi")
 
-_G.LOVEVLC_LIB_DIRECTORY = os.getenv("LOVEVLC_LIB_DIRECTORY")
-_G.LOVEVLC_PLUGIN_DIRECTORY = os.getenv("LOVEVLC_PLUGIN_DIRECTORY")
+_G.LOVEVLC_LIB_DIRECTORY = _G.LOVEVLC_LIB_DIRECTORY or os.getenv("LOVEVLC_LIB_DIRECTORY")
+_G.LOVEVLC_PLUGIN_DIRECTORY = _G.LOVEVLC_PLUGIN_DIRECTORY or os.getenv("LOVEVLC_PLUGIN_DIRECTORY")
 
 local libdir = _G.LOVEVLC_LIB_DIRECTORY or "" -- default to current executable directory
 local plugindir = _G.LOVEVLC_PLUGIN_DIRECTORY or "plugins" -- default to "plugins" in current executable directory
@@ -71,9 +75,9 @@ _G.libvlcWrapper = ffi.load(assert(package.searchpath("libvlc_wrapper", package.
 -- similarly to libvlccore, variable not used, but needed to load openal
 _G.libopenal = os == "Windows" and ffi.load(assert(package.searchpath("OpenAL32", package.cpath))) or ffi.C
 
-require("libvlc_h")
-require("al_h")
-require("alc_h")
+require((parent and (parent .. ".") or "") .. "libvlc_h")
+require((parent and (parent .. ".") or "") .. "al_h")
+require((parent and (parent .. ".") or "") .. "alc_h")
 
 ffi.cdef [[\
     void free(void* a);
