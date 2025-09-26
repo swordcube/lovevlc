@@ -32,12 +32,12 @@ local settings = {
     EXPORT_DIR = "../../export",
 
     FOLDERS_TO_COPY = {},
-    FILES_TO_INCLUDE = {"conf.lua", "main.lua", "libvlc_h.lua"},
+    FILES_TO_INCLUDE = {"conf.lua", "main.lua", "libvlc_h.lua", "al_h.lua", "alc_h.lua"},
     FILES_TO_EXCLUDE = {},
 
     EXTERNAL_FILES = {},
     LOVE_PATH = {
-        WINDOWS = "C:/Program Files/LOVE",
+        WINDOWS = "D:/user/apps/love_2d",
         LINUX = "love.AppImage"
     }
 }

@@ -3,6 +3,8 @@
 #include <vector>
 
 #include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/alext.h"
 #include "vlc/vlc.h"
 
 // NOTE: this only wraps functions that i can't call correctly in lua code
@@ -16,18 +18,20 @@ extern "C" {
     #endif
 
     typedef struct {
-        unsigned char* pixelBuffer;
-        unsigned int width;
-        unsigned int height;
+        unsigned char* pixelBuffer = nullptr;
+        unsigned int width = 0;
+        unsigned int height = 0;
     } LuaVLC_Video;
     
     typedef struct {
-        ALuint source;
-        std::vector<ALuint> buffers;
-        ALenum format;
-        unsigned sampleRate;
-        unsigned int frameSize;
-        unsigned int bufferPoolCount = 0;
+        ALuint source = 0;
+        ALuint* buffers = nullptr;
+        unsigned int bufferCount = 0;
+        unsigned int bufferIndex = 0;
+
+        ALenum format = 0;
+        unsigned sampleRate = 0;
+        unsigned int frameSize = 0;
     } LuaVLC_Audio;
 
     static const int MAX_BUFFER_COUNT = 255;
@@ -37,18 +41,13 @@ extern "C" {
     static int _alUseEXTMCFORMATS = -1;
 
     EXPORT_DLL LuaVLC_Video luavlc_new() {
-        LuaVLC_Video video;
+        LuaVLC_Video video = {0};
         return video;
-    }
-
-    EXPORT_DLL LuaVLC_Audio luavlc_audio_new() {
-        LuaVLC_Audio audio;
-        return audio;
     }
 
     EXPORT_DLL LuaVLC_Audio* luavlc_audio_new_ptr() {
         LuaVLC_Audio* audio = (LuaVLC_Audio*)malloc(sizeof(LuaVLC_Audio));
-        *audio = luavlc_audio_new();
+        memset(audio, 0, sizeof(LuaVLC_Audio));
         return audio;
     }
 
@@ -68,16 +67,13 @@ extern "C" {
         }
     }
 
-    EXPORT_DLL void luavlc_audio_free(LuaVLC_Audio audio) {
-        alDeleteSources(1, &audio.source);
-        alDeleteBuffers(MAX_BUFFER_COUNT, audio.buffers.data());
-        // free((void*)audio.buffers);
-    }
-
     EXPORT_DLL void luavlc_audio_free_ptr(LuaVLC_Audio* audio) {
+        if (audio == NULL || audio == nullptr)
+            return;
         alDeleteSources(1, &audio->source);
-        alDeleteBuffers(MAX_BUFFER_COUNT, audio->buffers.data());
-        // free((void*)audio->buffers);
+        alDeleteBuffers(audio->bufferCount, audio->buffers);
+        free((void*)audio->buffers);
+        free((void*)audio);
     }
 
     // i can't write this or unlock_cb function in lua code
@@ -110,32 +106,32 @@ extern "C" {
         if(audio == NULL || audio == nullptr || audio->source == 0)
             return;
 
-        ALint nb;
-        alGetSourcei(audio->source, AL_BUFFERS_PROCESSED, &nb);
-        
-        if(nb > 0) {
-            ALuint* buffers;
-            alSourceUnqueueBuffers(audio->source, nb, buffers);
-    
-            for(int i = 0; i < nb; i++)
-                audio->buffers.push_back(buffers[i]);
+        ALint nb = 0;
+        bool useUnqueue = audio->bufferIndex > audio->bufferCount - 1;
+        if (!useUnqueue) {
+            audio->bufferIndex += 1;
+            nb = 1;
+        } else {
+            alGetSourcei(audio->source, AL_BUFFERS_PROCESSED, &nb);
         }
-        if(audio->buffers.empty())
+
+        if(nb == 0)
             return;
 
-        ALuint buffer = audio->buffers.front();
-        audio->buffers.erase(audio->buffers.begin());
-        
-        alBufferData(buffer, audio->format, rawSamples, count * audio->frameSize, audio->sampleRate);
+        ALuint buffer;
+        if (useUnqueue) {
+            alSourceUnqueueBuffers(audio->source, 1, &buffer);
+        } else {
+            buffer = audio->buffers[audio->bufferIndex - 1];
+        }
+
+        ALsizei size = count * audio->frameSize;
+        alBufferData(buffer, audio->format, rawSamples, size, audio->sampleRate);
         alSourceQueueBuffers(audio->source, 1, &buffer);
 
         ALint state = 0;
         alGetSourcei(audio->source, AL_SOURCE_STATE, &state);
-
-        // TODO: why the fuck is state always AL_STOPPED
-        
         if(state != AL_PLAYING) {
-            printf("playing audio\n");
             alSourcePlay(audio->source);
         }
     }
@@ -148,7 +144,7 @@ extern "C" {
         ALint state = 0;
         alGetSourcei(audio->source, AL_SOURCE_STATE, &state);
 
-        if(state == AL_PAUSED)
+        if(state == AL_PAUSED || state == AL_STOPPED)
             alSourcePlay(audio->source);
     }
 
@@ -177,11 +173,15 @@ extern "C" {
     }
 
     void audio_set_volume(void *data, float volume, bool mute) {
-        // TODO: handle it.
+        LuaVLC_Audio* audio = (LuaVLC_Audio*)data;
+        if(audio == NULL || audio == nullptr || audio->source == 0)
+            return;
+
+        alSourcef(audio->source, AL_GAIN, mute ? 0.0f : volume);
     }
 
     int audio_setup(void **data, char *format, unsigned *p_rate, unsigned *p_channels) {
-        LuaVLC_Audio* audio = (LuaVLC_Audio*)*data;
+        LuaVLC_Audio* audio = *((LuaVLC_Audio**)data);
         if(audio == NULL || audio == nullptr || audio->source == 0)
             return 1;
         
@@ -200,36 +200,38 @@ extern "C" {
             channels = 2;
 
         bool useFloat32 = _alUseEXTFLOAT32 == 1 && strcmp(format, "FL32") == 0;
-        memcpy(format, useFloat32 ? "FL32" : "S16N", 4);
-        
+        // memcpy(format, useFloat32 ? "FL32" : "S16N", 4);
+
         switch(channels) {
             case 1:
-                audio->format = alGetEnumValue(useFloat32 ? "AL_FORMAT_MONO_FLOAT32" : "AL_FORMAT_MONO16");
+                audio->format = useFloat32 ? AL_FORMAT_MONO_FLOAT32 : AL_FORMAT_MONO16;
                 channels = 1;
                 break;
 
-            case 2 | 3:
-                audio->format = alGetEnumValue(useFloat32 ? "AL_FORMAT_STEREO_FLOAT32" : "AL_FORMAT_STEREO16");
+            case 2:
+            case 3:
+                audio->format = useFloat32 ? AL_FORMAT_STEREO_FLOAT32 : AL_FORMAT_STEREO16;
                 channels = 2;
                 break;
 
             case 4:
-                audio->format = alGetEnumValue(useFloat32 ? "AL_FORMAT_QUAD32" : "AL_FORMAT_QUAD16");
+                audio->format = useFloat32 ? AL_FORMAT_QUAD32 : AL_FORMAT_QUAD16;
                 channels = 4;
                 break;
 
-            case 5 | 6:
-                audio->format = alGetEnumValue(useFloat32 ? "AL_FORMAT_51CHN32" : "AL_FORMAT_51CHN16");
+            case 5:
+            case 6:
+                audio->format = useFloat32 ? AL_FORMAT_51CHN32 : AL_FORMAT_51CHN16;
                 channels = 6;
                 break;
 
-            case 7 | 8:
-                audio->format = alGetEnumValue(useFloat32 ? "AL_FORMAT_71CHN32" : "AL_FORMAT_71CHN16");
+            case 7:
+            case 8:
+                audio->format = useFloat32 ? AL_FORMAT_71CHN32 : AL_FORMAT_71CHN16;
                 channels = 8;
                 break;
         }
         audio->frameSize = (useFloat32 ? sizeof(float) : sizeof(int16_t)) * channels;
-        *p_channels = channels;
         return 0;
     }
 
@@ -237,15 +239,17 @@ extern "C" {
     // luajit is being really strange and picky about the struct types
     EXPORT_DLL void video_setup_audio(void* p_audio, libvlc_media_player_t *mp) {
         LuaVLC_Audio* audio = (LuaVLC_Audio*)p_audio;
-        // audio->buffers = (ALuint*)malloc(sizeof(ALuint) * MAX_BUFFER_COUNT); 
-        alGenSources(1, &audio->source);
+        if (audio == NULL || audio == nullptr)
+            return;
+        if (mp == NULL || mp == nullptr)
+            return;
 
-        audio->buffers = {};
-        for(int i = 0; i < MAX_BUFFER_COUNT; i++) {
-            audio->buffers.push_back(0);
+        alGenSources(1, &audio->source);
+        audio->bufferCount = MAX_BUFFER_COUNT;
+        audio->buffers = (ALuint*)malloc(audio->bufferCount * sizeof(ALuint));
+        for (int i = 0; i < audio->bufferCount; i++) {
             alGenBuffers(1, &audio->buffers[i]);
-        }
-        printf("generated buffers: %i\n", audio->buffers.size());
+        } 
 
         libvlc_audio_set_callbacks(mp, audio_play, audio_pause, audio_resume, audio_flush, NULL, audio);
         libvlc_audio_set_volume_callback(mp, audio_set_volume);
