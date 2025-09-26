@@ -31,8 +31,8 @@ local settings = {
     EXECUTABLE_NAME = "LoveVLCTest",
     EXPORT_DIR = "../../export",
 
-    FOLDERS_TO_COPY = {},
-    FILES_TO_INCLUDE = {"conf.lua", "main.lua", "libvlc_h.lua", "al_h.lua", "alc_h.lua"},
+    FOLDERS_TO_COPY = {"util"},
+    FILES_TO_INCLUDE = {"conf.lua", "main.lua", "init.lua", "libvlc_h.lua", "al_h.lua", "alc_h.lua"},
     FILES_TO_EXCLUDE = {},
 
     EXTERNAL_FILES = {},
