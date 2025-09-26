@@ -155,6 +155,10 @@ love.graphics.newVideo = function(filename, settings)
     if not settings.audio then
         table.insert(settings.options, ":no-audio")
     end
+    local handle = require((_G.LOVEVLC_PARENT and (_G.LOVEVLC_PARENT .. ".") or "") .. "util.handle")
+    if not handle.instance then
+        handle.init()
+    end
     local videoCl = {
         _type = "LoveVLCVideo",
 
