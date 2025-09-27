@@ -111,6 +111,11 @@ if not love.graphics then
 end
 local oldnewvid = love.graphics.newVideo
 
+local pattern = "^[%a][%a%d+%.%-]*://[^%s]*$"
+local function isURL(s)
+    return s:match(pattern) ~= nil
+end
+
 --- 
 --- Creates a new drawable Video. Supports most video formats thru LibVLC.
 --- 
@@ -192,7 +197,12 @@ love.graphics.newVideo = function(filename, settings)
             error("You can't access the " .. k .. " property from VLC audio source!", 2)
         end
     })
-    local media = libvlc.libvlc_media_new_path(libvlcWrapper.luavlc_get_vlc_instance(), filename)
+    local media = nil
+    if isURL(filename) then
+        media = libvlc.libvlc_media_new_location(libvlcWrapper.luavlc_get_vlc_instance(), filename)
+    else
+        media = libvlc.libvlc_media_new_path(libvlcWrapper.luavlc_get_vlc_instance(), filename)
+    end
     video._mediaPlayer = libvlc.libvlc_media_player_new_from_media(media)
     libvlc.libvlc_media_release(media)
 
