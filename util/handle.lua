@@ -61,7 +61,10 @@ function handle.initasync()
     handle.loading = true
     local thread = love.thread.newThread([[
         require("love.event")
-        local parent, hp = ...
+        local parent, libdir, plugindir, hp = ...
+        
+        _G.LOVEVLC_LIB_DIRECTORY = libdir
+        _G.LOVEVLC_PLUGIN_DIRECTORY = plugindir
 
         require(parent)
         _G.LOVEVLC_PARENT = parent
@@ -74,10 +77,13 @@ function handle.initasync()
         handle.instance = libvlcWrapper.luavlc_get_vlc_instance()
         ffi.gc(handle.instance, nil)
     end
-    thread:start(_G.LOVEVLC_PARENT, (_G.LOVEVLC_PARENT and (_G.LOVEVLC_PARENT .. ".") or "") .. "util.handle")
+    thread:start(_G.LOVEVLC_PARENT, _G.LOVEVLC_LIB_DIRECTORY, _G.LOVEVLC_PLUGIN_DIRECTORY, (_G.LOVEVLC_PARENT and (_G.LOVEVLC_PARENT .. ".") or "") .. "util.handle")
 end
 
 function handle.quit()
+    if not handle.instance then
+        return
+    end
     libvlc.libvlc_release(handle.instance)
 end
 

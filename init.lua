@@ -1,10 +1,14 @@
-_G.LOVEVLC_PARENT = ...
+local parent = ...
+if not parent or #parent == 0 or parent == "init" then
+    parent = nil
+end
+_G.LOVEVLC_PARENT = parent
 
 local jit = require("jit")
 local ffi = require("ffi")
 
-_G.LOVEVLC_LIB_DIRECTORY = os.getenv("LOVEVLC_LIB_DIRECTORY")
-_G.LOVEVLC_PLUGIN_DIRECTORY = os.getenv("LOVEVLC_PLUGIN_DIRECTORY")
+_G.LOVEVLC_LIB_DIRECTORY = _G.LOVEVLC_LIB_DIRECTORY or os.getenv("LOVEVLC_LIB_DIRECTORY")
+_G.LOVEVLC_PLUGIN_DIRECTORY = _G.LOVEVLC_PLUGIN_DIRECTORY or os.getenv("LOVEVLC_PLUGIN_DIRECTORY")
 
 local libdir = _G.LOVEVLC_LIB_DIRECTORY or "" -- default to current executable directory
 local plugindir = _G.LOVEVLC_PLUGIN_DIRECTORY or "plugins" -- default to "plugins" in current executable directory
@@ -24,6 +28,14 @@ function string.lastIndexOf(self, sub)
     end
 
     return lastIndex
+end
+function table.indexOf(table, element)
+    for i = 1, #table do
+        if table[i] == element then
+            return i
+        end
+    end
+    return -1
 end
 
 -- add os.setenv for plugin folder!
@@ -71,9 +83,9 @@ _G.libvlcWrapper = ffi.load(assert(package.searchpath("libvlc_wrapper", package.
 -- similarly to libvlccore, variable not used, but needed to load openal
 _G.libopenal = os == "Windows" and ffi.load(assert(package.searchpath("OpenAL32", package.cpath))) or ffi.C
 
-require("libvlc_h")
-require("al_h")
-require("alc_h")
+require((parent and (parent .. ".") or "") .. "libvlc_h")
+require((parent and (parent .. ".") or "") .. "al_h")
+require((parent and (parent .. ".") or "") .. "alc_h")
 
 ffi.cdef [[\
     void free(void* a);
@@ -110,6 +122,7 @@ if not love.graphics then
     return -- this file gets required for handle.initasync
 end
 local oldnewvid = love.graphics.newVideo
+local vids = {}
 
 local pattern = "^[%a][%a%d+%.%-]*://[^%s]*$"
 local function isURL(s)
@@ -143,16 +156,16 @@ love.graphics.newVideo = function(filename, settings)
         return oldnewvid(filename, settings)
     end
     if type(settings) == "boolean" then
-        settings = {audio = settings, dpiscale = 1}
+        settings = {audio = settings, dpiscale = love.graphics.getDPIScale()}
     end
     if not settings then
-        settings = {audio = false, dpiscale = 1}
+        settings = {audio = false, dpiscale = love.graphics.getDPIScale()}
     end
     if settings.audio == nil then
         settings.audio = false
     end
     if settings.dpiscale == nil then
-        settings.dpiscale = 1
+        settings.dpiscale = love.graphics.getDPIScale( )
     end
     if settings.options == nil then
         settings.options = {}
@@ -197,11 +210,16 @@ love.graphics.newVideo = function(filename, settings)
             error("You can't access the " .. k .. " property from VLC audio source!", 2)
         end
     })
+    table.insert(vids, video)
+
     local media = nil
     if isURL(filename) then
         media = libvlc.libvlc_media_new_location(libvlcWrapper.luavlc_get_vlc_instance(), filename)
     else
         media = libvlc.libvlc_media_new_path(libvlcWrapper.luavlc_get_vlc_instance(), filename)
+    end
+    for i = 1, #settings.options do
+        libvlc.libvlc_media_add_option(media, settings.options[i])
     end
     video._mediaPlayer = libvlc.libvlc_media_player_new_from_media(media)
     libvlc.libvlc_media_release(media)
@@ -243,6 +261,17 @@ love.graphics.newVideo = function(filename, settings)
 
         -- free luavlc audio struct stuff
         libvlcWrapper.luavlc_audio_free_ptr(v._luaVlcAudio)
+
+        -- free love2d resources
+        if v.imageData then
+            v.imageData:release()
+            v.imageData = nil
+        end
+        if v.image then
+            v.image:release()
+            v.image = nil
+        end
+        table.remove(vids, table.indexOf(vids, v))
     end
     video.getWidth = function(v)
         if not v.imageData then
@@ -310,4 +339,11 @@ love.graphics.draw = function(item, ...)
         return
     end
     return gfxDraw(item, ...)
+end
+local audioStop = love.audio.stop
+love.audio.stop = function()
+    for i = 1, #vids do
+        vids[i]:stop()
+    end
+    return audioStop()
 end
