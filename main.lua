@@ -25,6 +25,44 @@ function love.load(gameArgs)
     handle.initasync()
 end
 
+function love.run()
+    if love.load then love.load(love.parsedGameArguments, love.rawGameArguments) end
+
+    -- We don't want the first frame's dt to include time taken by love.load.
+    if love.timer then love.timer.step() end
+
+    -- Main loop time.
+    return function()
+        -- Process events.
+        if love.event then
+            love.event.pump()
+            for name, a,b,c,d,e,f,g,h in love.event.poll() do
+                if name == "quit" then
+                    if c or not love.quit or not love.quit() then
+                        return a or 0, b
+                    end
+                end
+                love.handlers[name](a,b,c,d,e,f,g,h)
+            end
+        end
+
+        -- Update dt, as we'll be passing it to update
+        local dt = love.timer and love.timer.step() or 0
+
+        -- Call update and draw
+        if love.update then love.update(dt) end -- will pass 0 if love.timer is disabled
+
+        if love.graphics and love.graphics.isActive() then
+            love.graphics.origin()
+            love.graphics.clear(love.graphics.getBackgroundColor())
+
+            if love.draw then love.draw() end
+
+            love.graphics.present()
+        end
+    end
+end
+
 function love.update()
     if handle.instance and not initVid then
         initVid = true
