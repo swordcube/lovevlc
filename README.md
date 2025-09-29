@@ -8,9 +8,9 @@
 
 A lightweight LÖVE library for extending video playback functionality via [libVLC](https://www.videolan.org/vlc/libvlc.html)
 
-> [!NOTE]  
+> [!NOTE]
 > This library only works for LÖVE 12.0+, you can download it from the main [LÖVE GitHub Repository](https://github.com/love2d/love) [Actions](https://github.com/love2d/love/actions).
-> 
+>
 > Download the latest *successful* build, and find the appropriate version for your OS and architecture (`love-windows-x64` for example)
 
 ### Supported Platforms
@@ -20,7 +20,7 @@ A lightweight LÖVE library for extending video playback functionality via [libV
 
 ### Planned Platforms
 
-- **macOS** (x86_64 and arm64 only)
+- **macOS**
 
 ### Dependencies
 
