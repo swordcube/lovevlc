@@ -41,10 +41,14 @@ end
 
 -- [ discard on unsupported oses ]
 
-local SUPPORTED_OSES = {"Windows", "Linux"}
+local SUPPORTED_OSES = { "Windows", "Linux", "OSX" }
 
 if not table.contains(SUPPORTED_OSES, os.name()) then
-    print("You are running an unsupported OS for exporting: " .. os.name() .. "\nSupported OSes are: " .. table.concat(SUPPORTED_OSES, ", ") .. "\n\nThis is most likely because I am unable to test said OS!\nReport an issue on GitHub if you'd like to see it supported!\n----------------------------------")
+    print("You are running an unsupported OS for exporting: " ..
+    os.name() ..
+    "\nSupported OSes are: " ..
+    table.concat(SUPPORTED_OSES, ", ") ..
+    "\n\nThis is most likely because I am unable to test said OS!\nReport an issue on GitHub if you'd like to see it supported!\n----------------------------------")
     os.exit(1)
 end
 
@@ -145,18 +149,21 @@ if os.name() == "Windows" then
     os.execute("copy \"" .. chosenLovePath .. "\\msvcp140.dll\" \"" .. EXPORT_DIR .. "/msvcp140.dll\" > nul 2>&1")
     os.execute("copy \"" .. chosenLovePath .. "\\msvcp140_1.dll\" \"" .. EXPORT_DIR .. "/msvcp140_1.dll\" > nul 2>&1")
     os.execute("copy \"" .. chosenLovePath .. "\\msvcp140_2.dll\" \"" .. EXPORT_DIR .. "/msvcp140_2.dll\" > nul 2>&1")
-    os.execute("copy \"" .. chosenLovePath .. "\\msvcp140_atomic_wait.dll\" \"" .. EXPORT_DIR .. "/msvcp140_atomic_wait.dll\" > nul 2>&1")
-    os.execute("copy \"" .. chosenLovePath .. "\\msvcp140_codecvt_ids.dll\" \"" .. EXPORT_DIR .. "/msvcp140_codecvt_ids.dll\" > nul 2>&1")
+    os.execute("copy \"" ..
+    chosenLovePath .. "\\msvcp140_atomic_wait.dll\" \"" .. EXPORT_DIR .. "/msvcp140_atomic_wait.dll\" > nul 2>&1")
+    os.execute("copy \"" ..
+    chosenLovePath .. "\\msvcp140_codecvt_ids.dll\" \"" .. EXPORT_DIR .. "/msvcp140_codecvt_ids.dll\" > nul 2>&1")
     os.execute("copy \"" .. chosenLovePath .. "\\msvcr120.dll\" \"" .. EXPORT_DIR .. "/msvcr120.dll\" > nul 2>&1")
     os.execute("copy \"" .. chosenLovePath .. "\\msvcr140.dll\" \"" .. EXPORT_DIR .. "/msvcr140.dll\" > nul 2>&1")
     os.execute("copy \"" .. chosenLovePath .. "\\vcruntime140.dll\" \"" .. EXPORT_DIR .. "/vcruntime140.dll\" > nul 2>&1")
-    os.execute("copy \"" .. chosenLovePath .. "\\vcruntime140_1.dll\" \"" .. EXPORT_DIR .. "/vcruntime140_1.dll\" > nul 2>&1")
+    os.execute("copy \"" ..
+    chosenLovePath .. "\\vcruntime140_1.dll\" \"" .. EXPORT_DIR .. "/vcruntime140_1.dll\" > nul 2>&1")
 
     -- create temporary executable & copy icon to export dir
     local exe = EXPORT_TYPE == "debug" and "lovec" or "love"
     os.execute("copy /b \"" .. chosenLovePath .. "\\" .. exe .. ".exe\" TEMPORARY_EXECUTABLE.exe > nul 2>&1")
     -- os.execute("copy ..\\..\\icon.ico \"" .. EXPORT_DIR .. "/icon.ico\" > nul 2>&1")
-    
+
     -- set icon and version info in temp executable
     -- os.execute("rcedit.exe TEMPORARY_EXECUTABLE.exe --set-icon \"" .. EXPORT_DIR .. "/icon.ico\"")
     os.execute("rcedit.exe TEMPORARY_EXECUTABLE.exe --set-file-version 1.0.0")
@@ -165,9 +172,10 @@ if os.name() == "Windows" then
     os.execute("rcedit.exe TEMPORARY_EXECUTABLE.exe --set-version-string \"CompanyName\" \"swordcube\"")
     os.execute("rcedit.exe TEMPORARY_EXECUTABLE.exe --set-version-string \"LegalCopyright\" \"2024-2024 swordcube\"")
     os.execute("rcedit.exe TEMPORARY_EXECUTABLE.exe --set-version-string \"FileDescription\" \"funkin.lua\"")
-    
+
     -- create the new game executable by merging the temp executable with the .love file
-    os.execute("copy /b TEMPORARY_EXECUTABLE.exe + game.love \"" .. EXPORT_DIR .. "/" .. EXECUTABLE_NAME .. "\" > nul 2>&1 2>&1")
+    os.execute("copy /b TEMPORARY_EXECUTABLE.exe + game.love \"" ..
+    EXPORT_DIR .. "/" .. EXECUTABLE_NAME .. "\" > nul 2>&1 2>&1")
 
     -- remove temporary junk
     os.remove("game.love")
@@ -180,7 +188,11 @@ if os.name() == "Windows" then
         os.execute("mkdir \"" .. folderPath .. "\" > nul 2>&1 2>&1")
 
         local letter = isdir(raw:gsub("/", "\\")) and "d" or "f"
-        os.execute("echo " .. letter .. " | Xcopy \"" .. raw:gsub("/", "\\") .. "\"" .. " \"" .. EXPORT_DIR:gsub("/", "\\") .. "\\" .. save:gsub("/", "\\") .. "\" /E /H /C /I /Y > nul 2>&1")
+        os.execute("echo " ..
+        letter ..
+        " | Xcopy \"" ..
+        raw:gsub("/", "\\") ..
+        "\"" .. " \"" .. EXPORT_DIR:gsub("/", "\\") .. "\\" .. save:gsub("/", "\\") .. "\" /E /H /C /I /Y > nul 2>&1")
     end
     -- copy discord rpc dll file to export directory
     -- os.execute("copy \"..\\..\\libs\\windows\\discord-rpc.dll\"" .. " \"" .. EXPORT_DIR .. "/discord-rpc.dll\"")
@@ -195,11 +207,12 @@ else
     end
     local success = os.execute(zipCmd .. " > /dev/null")
     if not success then
-        print("An error occured while zipping the game, cannot continue!\nDo you have the \"7zip\" package installed?\n----------------------------------")
+        print(
+        "An error occured while zipping the game, cannot continue!\nDo you have the \"7zip\" package installed?\n----------------------------------")
         os.exit(1)
     end
     os.rename("game.zip", "game.love")
-    
+
     -- extract the love appimage
     os.execute("./" .. chosenLovePath .. " --appimage-extract > /dev/null")
 
@@ -220,9 +233,10 @@ else
     local desktopContents = desktopFile:read("*a")
     -- desktopContents = string.gsub(desktopContents, "Icon=love", "Icon=ChipGameIcon")
     desktopContents = string.gsub(desktopContents, "Name=LÖVE", "Name=funkin.lua")
-    desktopContents = string.gsub(desktopContents, "Comment=The unquestionably awesome 2D game engine", "Comment=A fanmade modding engine for Friday Night Funkin' made in LÖVE")
+    desktopContents = string.gsub(desktopContents, "Comment=The unquestionably awesome 2D game engine",
+        "Comment=A fanmade modding engine for Friday Night Funkin' made in LÖVE")
     desktopFile:close()
-    
+
     desktopFile = io.open("squashfs-root/love.desktop", "w")
     desktopFile:write(desktopContents)
     desktopFile:close()
@@ -232,7 +246,7 @@ else
 
     -- package the game back into an appimage
     os.execute("./appimagetool.AppImage squashfs-root " .. EXPORT_DIR .. "/" .. EXECUTABLE_NAME .. " > /dev/null 2>&1")
-    
+
     -- remove temporary junk
     os.remove("game.love")
     os.remove("squashfs-root/love.svg")

@@ -31,8 +31,8 @@ local settings = {
     EXECUTABLE_NAME = "LoveVLCTest",
     EXPORT_DIR = "../../export",
 
-    FOLDERS_TO_COPY = {"util"},
-    FILES_TO_INCLUDE = {"conf.lua", "main.lua", "init.lua", "libvlc_h.lua", "al_h.lua", "alc_h.lua"},
+    FOLDERS_TO_COPY = { "util" },
+    FILES_TO_INCLUDE = { "conf.lua", "main.lua", "init.lua", "libvlc_h.lua", "al_h.lua", "alc_h.lua" },
     FILES_TO_EXCLUDE = {},
 
     EXTERNAL_FILES = {},
@@ -46,7 +46,6 @@ if os.name() == "Windows" then
     settings.EXTERNAL_FILES["../../lib/win64/libvlc.dll"] = "libvlc.dll"
     settings.EXTERNAL_FILES["../../lib/win64/libvlccore.dll"] = "libvlccore.dll"
     settings.EXTERNAL_FILES["../../lib/win64/libvlc_wrapper.dll"] = "libvlc_wrapper.dll"
-
 elseif os.name() == "Linux" then
     settings.EXTERNAL_FILES["../../lib/linux/libvlc_wrapper.so"] = "libvlc_wrapper.so"
 end
