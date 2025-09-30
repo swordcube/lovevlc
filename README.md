@@ -6,7 +6,7 @@
 
 ![](https://img.shields.io/github/repo-size/swordcube/lovevlc) ![](https://badgen.net/github/open-issues/swordcube/lovevlc) ![](https://badgen.net/badge/license/MIT/green)
 
-A lightweight LÖVE library for extending video playback functionality via [libVLC](https://www.videolan.org/vlc/libvlc.html)
+A LÖVE library for extending video playback functionality via [libVLC](https://www.videolan.org/vlc/libvlc.html)
 
 > [!NOTE]
 > This library only works for LÖVE 12.0+, you can download it from the main [LÖVE GitHub Repository](https://github.com/love2d/love) [Actions](https://github.com/love2d/love/actions).
