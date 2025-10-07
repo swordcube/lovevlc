@@ -76,6 +76,8 @@ function handle.initasync()
     love.handlers.vlcinit = function()
         handle.instance = libvlcWrapper.luavlc_get_vlc_instance()
         ffi.gc(handle.instance, nil)
+        
+        handle.loading = false
     end
     thread:start(_G.LOVEVLC_PARENT, _G.LOVEVLC_LIB_DIRECTORY, _G.LOVEVLC_PLUGIN_DIRECTORY, (_G.LOVEVLC_PARENT and (_G.LOVEVLC_PARENT .. ".") or "") .. "util.handle")
 end
