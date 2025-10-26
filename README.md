@@ -1,3 +1,7 @@
+> [!WARNING]
+> # Migration Alert!!
+> This repo has now migrated to [git.gay](https://git.gay), the new repo can be found by [clicking on this text](https://git.gay/swordcube/lovevlc)
+
 <a href="https://github.com/swordcube/lovevlc">
     <img src="./assets/logo.png" align="center" />
 </a>
